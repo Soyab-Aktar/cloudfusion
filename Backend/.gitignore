@@ -6,3 +6,6 @@ dist
 /src/generated
 .codex
 .agents
+/generated/prisma
+.windsurf
+.claude
