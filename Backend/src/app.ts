@@ -6,7 +6,7 @@ import { IndexRoutes } from "./app/routes";
 const app: Application = express();
 
 // Mount Better Auth handler
-app.all("/api/auth/*", toNodeHandler(auth));
+app.all("/api/auth", toNodeHandler(auth));
 
 // Enable URL-encoded form data parsing
 app.use(express.urlencoded({ extended: true }));
