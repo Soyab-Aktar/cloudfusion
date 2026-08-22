@@ -5,6 +5,10 @@ import { ILoginUserPayload, IRegisterUserPayload } from "./auth.interface";
 import { UserStatus } from "../../../generated/prisma/enums";
 import { tokenUtils } from "../../utils/token";
 import { prisma } from "../../lib/prisma";
+import { IRequestUser } from "../../interfaces/requestUser.interface";
+import { jwtUtils } from "../../utils/jwt";
+import { envVars } from "../../config/env";
+import { JwtPayload } from "jsonwebtoken";
 
 const registerUser = async (payload: IRegisterUserPayload) => {
   const { name, email, password } = payload;
@@ -84,7 +88,94 @@ const loginUser = async (payload: ILoginUserPayload) => {
   }
 }
 
+const getMe = async (user: IRequestUser) => {
+  const isUserExists = await prisma.user.findUnique({
+    where: {
+      email: user.email
+    }
+  })
+  if (!isUserExists) {
+    throw new AppError(status.NOT_FOUND, "User not exits");
+  }
+  return isUserExists;
+}
+
+const getNewToken = async (refreshToken: string, sessionToken: string) => {
+  const cleanSessionToken = sessionToken.split('.')[0];
+
+  const isSessionTokenExists = await prisma.session.findUnique({
+    where: {
+      token: cleanSessionToken,
+    },
+    include: {
+      user: true,
+    },
+  });
+
+  if (!isSessionTokenExists) {
+    throw new AppError(status.UNAUTHORIZED, "Invalid or expired session token");
+  }
+
+  const user = isSessionTokenExists.user;
+
+  if (user.status === UserStatus.BLOCKED) {
+    throw new AppError(status.FORBIDDEN, "User is blocked");
+  }
+
+  if (user.isDeleted || user.status === UserStatus.DELETED) {
+    throw new AppError(status.NOT_FOUND, "User is deleted");
+  }
+
+  const verifiedRefreshToken = jwtUtils.verifyToken(refreshToken, envVars.REFRESH_TOKEN_SECRET);
+
+  if (!verifiedRefreshToken.success || !verifiedRefreshToken.data) {
+    throw new AppError(status.UNAUTHORIZED, "Invalid or expired refresh token");
+  }
+
+  const data = verifiedRefreshToken.data as JwtPayload;
+
+  const newAccessToken = tokenUtils.getAccessToken({
+    userId: data.userId,
+    role: data.role,
+    name: data.name,
+    email: data.email,
+    status: data.status,
+    isDeleted: data.isDeleted,
+    emailVerified: data.emailVerified,
+  });
+
+  const newRefreshToken = tokenUtils.getRefreshToken({
+    userId: data.userId,
+    role: data.role,
+    name: data.name,
+    email: data.email,
+    status: data.status,
+    isDeleted: data.isDeleted,
+    emailVerified: data.emailVerified,
+  });
+
+
+  const updatedSessionToken = await prisma.session.update({
+    where: {
+      token: cleanSessionToken,
+    },
+    data: {
+      expiresAt: new Date(Date.now() + 60 * 60 * 24 * 1000),
+      updatedAt: new Date(),
+    },
+  });
+
+  return {
+    accessToken: newAccessToken,
+    refreshToken: newRefreshToken,
+    sessionToken: updatedSessionToken.token,
+  };
+};
+
+
 export const AuthService = {
   registerUser,
   loginUser,
+  getMe,
+  getNewToken,
 }

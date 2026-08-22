@@ -9,7 +9,6 @@ import { cookieUtils } from "../utils/cookie";
 
 export const checkAuth = (...authRoles: Role[]) => async (req: Request, res: Response, next: NextFunction) => {
   try {
-    // 1. Session Token Verification
     const sessionToken = cookieUtils.getCookie(req, "better-auth.session_token");
 
     if (sessionToken) {
@@ -64,7 +63,6 @@ export const checkAuth = (...authRoles: Role[]) => async (req: Request, res: Res
       }
     }
 
-    // 2. Access Token Verification (Fallback)
     const accessToken = cookieUtils.getCookie(req, 'accessToken');
 
     if (!sessionToken && !accessToken) {
