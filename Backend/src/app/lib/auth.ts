@@ -3,6 +3,8 @@ import { prismaAdapter } from "better-auth/adapters/prisma";
 import { prisma } from "./prisma";
 import { envVars } from "../config/env";
 import { Role, UserStatus } from "../../generated/prisma/enums";
+import { bearer, emailOTP } from "better-auth/plugins";
+import { sendEmail } from "../utils/email";
 
 const isProduction = envVars.NODE_ENV === 'production';
 export const auth = betterAuth({
@@ -13,7 +15,51 @@ export const auth = betterAuth({
   }),
   emailAndPassword: {
     enabled: true,
+    requireEmailVerification: true,
   },
+  emailVerification: {
+    sendOnSignIn: true,
+    sendOnSignUp: true,
+    autoSignInAfterVerification: true,
+  },
+  plugins: [
+    bearer(),
+    emailOTP({
+      overrideDefaultEmailVerification: true,
+      async sendVerificationOTP({ email, otp, type }) {
+        if (type === 'email-verification') {
+          const user = await prisma.user.findUnique({
+            where: {
+              email,
+            }
+          });
+          if (!user) {
+            console.error(`User with Email ${email} not found. cannot send verification OTP`);
+            return;
+          }
+
+          if (user.role === Role.ADMIN) {
+            console.log(`User with Email ${email} is a Super Admin, Skipping sending verification OTP`);
+            return;
+          }
+
+          if (!user.emailVerified) {
+            await sendEmail({
+              to: email,
+              subject: "Email Verification",
+              templateName: "otp",
+              templateData: {
+                name: user.name,
+                otp: otp
+              }
+            });
+          }
+        }
+      },
+      expiresIn: 2 * 60,
+      otpLength: 6,
+    })
+  ],
 
   user: {
     additionalFields: {
