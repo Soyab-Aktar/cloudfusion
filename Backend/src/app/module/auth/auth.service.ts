@@ -1,7 +1,7 @@
 import status from "http-status";
 import AppError from "../../errorHelpers/AppError";
 import { auth } from "../../lib/auth";
-import { ILoginUserPayload, IRegisterUserPayload } from "./auth.interface";
+import { IChangePasswordPayload, ILoginUserPayload, IRegisterUserPayload, IResetPasswordPayload, IVerifyEmailPayload } from "./auth.interface";
 import { UserStatus } from "../../../generated/prisma/enums";
 import { tokenUtils } from "../../utils/token";
 import { prisma } from "../../lib/prisma";
@@ -172,10 +172,160 @@ const getNewToken = async (refreshToken: string, sessionToken: string) => {
   };
 };
 
+const verifyEmail = async (payload: IVerifyEmailPayload) => {
+  const result = await auth.api.verifyEmailOTP({
+    body: {
+      email: payload.email,
+      otp: payload.otp,
+    }
+  });
+  if (result.status && !result.user.emailVerified) {
+    await prisma.user.update({
+      where: {
+        email: payload.email
+      },
+      data: {
+        emailVerified: true,
+      }
+    });
+  }
+  return result;
+}
+
+const logOutUser = async (sessionToken?: string) => {
+  if (!sessionToken) {
+    return null;
+  }
+  try {
+    const result = await auth.api.signOut({
+      headers: new Headers({
+        Authorization: `Bearer ${sessionToken}`
+      })
+    });
+    return result;
+  } catch (error) {
+    return null;
+  }
+}
+
+const changePassword = async (payload: IChangePasswordPayload, sessionToken: string) => {
+  const session = await auth.api.getSession({
+    headers: new Headers({
+      Authorization: `Bearer ${sessionToken}`,
+    })
+  });
+
+  if (!session) {
+    throw new AppError(status.UNAUTHORIZED, "Invalid Session Token");
+  }
+
+  const result = await auth.api.changePassword({
+    body: {
+      currentPassword: payload.currentPassword,
+      newPassword: payload.newPassword,
+      revokeOtherSessions: true,
+    },
+    headers: new Headers({
+      Authorization: `Bearer ${sessionToken}`,
+    })
+  });
+
+  const accessToken = tokenUtils.getAccessToken({
+    userId: session.user.id,
+    role: session.user.role,
+    name: session.user.name,
+    email: session.user.email,
+    status: session.user.status,
+    isDeleted: session.user.isDeleted,
+    emailVerified: session.user.emailVerified,
+  });
+
+  const refreshToken = tokenUtils.getRefreshToken({
+    userId: session.user.id,
+    role: session.user.role,
+    name: session.user.name,
+    email: session.user.email,
+    status: session.user.status,
+    isDeleted: session.user.isDeleted,
+    emailVerified: session.user.emailVerified,
+  });
+
+
+  return {
+    ...result,
+    accessToken,
+    refreshToken,
+  };
+}
+
+const forgotPassword = async (email: string) => {
+  const isUserExist = await prisma.user.findUnique({
+    where: {
+      email,
+    }
+  });
+  if (!isUserExist) {
+    throw new AppError(status.NOT_FOUND, "User Not Found");
+  }
+
+  if (!isUserExist.emailVerified) {
+    throw new AppError(status.BAD_REQUEST, "User Email is not Verified");
+  }
+
+  if (isUserExist.isDeleted || isUserExist.status === UserStatus.DELETED) {
+    throw new AppError(status.NOT_FOUND, "User not Found");
+  }
+
+  const result = await auth.api.requestPasswordResetEmailOTP({
+    body: {
+      email,
+    }
+  })
+}
+
+const resetPassword = async (payload: IResetPasswordPayload) => {
+  const { email, otp, newPassword } = payload;
+  const isUserExist = await prisma.user.findUnique({
+    where: {
+      email,
+    }
+  });
+
+  if (!isUserExist) {
+    throw new AppError(status.NOT_FOUND, "User Not Found");
+  }
+
+  if (!isUserExist.emailVerified) {
+    throw new AppError(status.BAD_REQUEST, "User Email is not Verified");
+  }
+
+  if (isUserExist.isDeleted || isUserExist.status === UserStatus.DELETED) {
+    throw new AppError(status.NOT_FOUND, "User not Found");
+  }
+
+  const result = await auth.api.resetPasswordEmailOTP({
+    body: {
+      email,
+      otp,
+      password: newPassword,
+    }
+  });
+  await prisma.session.deleteMany({
+    where: {
+      userId: isUserExist.id,
+    }
+  })
+}
+
 
 export const AuthService = {
   registerUser,
   loginUser,
   getMe,
   getNewToken,
+  verifyEmail,
+  logOutUser,
+  changePassword,
+  forgotPassword,
+  resetPassword,
 }
