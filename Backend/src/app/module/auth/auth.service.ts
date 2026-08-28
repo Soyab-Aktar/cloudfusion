@@ -318,6 +318,39 @@ const resetPassword = async (payload: IResetPasswordPayload) => {
 }
 
 
+const googleLoginSuccess = async (session: Record<string, any>) => {
+  const isUserExist = await prisma.user.findUniqueOrThrow({
+    where: { id: session.user.id }
+  });
+  if (isUserExist.status === UserStatus.BLOCKED) {
+    throw new AppError(status.FORBIDDEN, "User is blocked");
+  }
+  if (isUserExist.isDeleted || isUserExist.status === UserStatus.DELETED) {
+    throw new AppError(status.NOT_FOUND, "User is deleted");
+  }
+
+  const accessToken = tokenUtils.getAccessToken({
+    userId: session.user.id,
+    role: session.user.role,
+    name: session.user.name,
+    email: session.user.email,
+
+  });
+
+  const refreshToken = tokenUtils.getRefreshToken({
+    userId: session.user.id,
+    role: session.user.role,
+    name: session.user.name,
+    email: session.user.email,
+  });
+
+  return {
+    accessToken,
+    refreshToken,
+  }
+}
+
+
 export const AuthService = {
   registerUser,
   loginUser,
@@ -328,4 +361,5 @@ export const AuthService = {
   changePassword,
   forgotPassword,
   resetPassword,
+  googleLoginSuccess,
 }

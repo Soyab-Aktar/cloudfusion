@@ -22,6 +22,24 @@ export const auth = betterAuth({
     sendOnSignUp: true,
     autoSignInAfterVerification: true,
   },
+  socialProviders: {
+    google: {
+      clientId: envVars.GOOGLE_CLIENT_ID,
+      clientSecret: envVars.GOOGLE_CLIENT_SECRET,
+      mapProfileToUser: (profile) => {
+        return {
+          name: profile.name,
+          email: profile.email,
+          image: profile.picture,
+          role: Role.USER,
+          status: UserStatus.ACTIVE,
+          emailVerified: true,
+          isDeleted: false,
+          deletedAt: null,
+        }
+      }
+    }
+  },
   plugins: [
     bearer(),
     emailOTP({
@@ -133,5 +151,9 @@ export const auth = betterAuth({
 
     }
   },
+  redirectURLs: {
+    signIn: `${envVars.BETTER_AUTH_URL}/api/v1/auth/google/success`,
+  },
+  trustedOrigins: [envVars.BETTER_AUTH_URL || "http://localhost:5000", envVars.FRONTEND_URL]
 
 });

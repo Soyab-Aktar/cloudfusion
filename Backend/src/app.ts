@@ -3,16 +3,19 @@ import { toNodeHandler } from "better-auth/node";
 import { auth } from "./app/lib/auth";
 import { IndexRoutes } from "./app/routes";
 import cookieParser from "cookie-parser";
+import path from "path";
+import qs from "qs";
 
 const app: Application = express();
 
-// Mount Better Auth handler
-app.all("/api/auth", toNodeHandler(auth));
+app.set("query parser", (str: string) => qs.parse(str));
+app.set("view engine", "ejs");
+app.set("views", path.resolve(process.cwd(), `src/app/template`));
+app.use("/api/auth", toNodeHandler(auth));
 
-// Enable URL-encoded form data parsing
+
 app.use(express.urlencoded({ extended: true }));
 
-// Middleware to parse JSON bodies
 app.use(express.json());
 
 app.use(cookieParser());

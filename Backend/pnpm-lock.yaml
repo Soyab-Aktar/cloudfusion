@@ -47,6 +47,9 @@ importers:
       pg:
         specifier: ^8.23.0
         version: 8.23.0
+      qs:
+        specifier: ^6.15.3
+        version: 6.15.3
       tsx:
         specifier: ^4.23.12
         version: 4.23.12
@@ -81,6 +84,9 @@ importers:
       '@types/pg':
         specifier: ^8.23.1
         version: 8.23.1
+      '@types/qs':
+        specifier: ^6.15.1
+        version: 6.15.1
       eslint:
         specifier: ^10.8.1
         version: 10.8.1(jiti@2.7.0)
