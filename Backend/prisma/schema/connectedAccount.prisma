@@ -1,0 +1,41 @@
+model ProviderConfig {
+  id                    String             @id @default(uuid())
+  userId                String?
+  provider              StorageProvider
+  clientIdEncrypted     String
+  clientSecretEncrypted String
+  redirectUri           String
+  scopes                String[]
+  createdAt             DateTime           @default(now())
+  updatedAt             DateTime           @updatedAt
+  connectedAccounts     ConnectedAccount[]
+
+  @@map("providerConfigs")
+}
+
+model ConnectedAccount {
+  id                    String          @id @default(uuid())
+  userId                String
+  providerConfigId      String?
+  provider              StorageProvider @default(GOOGLE_DRIVE)
+  providerAccountId     String
+  email                 String
+  displayName           String?
+  avatarUrl             String?
+  accessTokenEncrypted  String?
+  refreshTokenEncrypted String?
+  tokenExpiresAt        DateTime?
+  status                AccountStatus   @default(CONNECTED)
+  lastError             String?
+  totalBytes            BigInt?
+  usedBytes             BigInt?         @default(0)
+  availableBytes        BigInt?
+  lastSyncedAt          DateTime?
+  createdAt             DateTime        @default(now())
+  updatedAt             DateTime        @updatedAt
+  providerConfig        ProviderConfig? @relation(fields: [providerConfigId], references: [id], onDelete: SetNull)
+  user                  User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, provider, providerAccountId])
+  @@map("connectedAccounts")
+}

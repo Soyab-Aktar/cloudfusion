@@ -8,3 +8,17 @@ enum UserStatus {
   BLOCKED
   DELETED
 }
+
+enum StorageProvider {
+  GOOGLE_DRIVE
+  AWS_S3
+  DROPBOX
+  ONEDRIVE
+}
+
+enum AccountStatus {
+  CONNECTED
+  DISCONNECTED
+  EXPIRED
+  ERROR
+}
