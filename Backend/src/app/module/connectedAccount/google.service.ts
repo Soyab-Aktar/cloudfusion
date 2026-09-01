@@ -11,7 +11,7 @@ export const createOAuthClient = () => {
   return new google.auth.OAuth2(
     envVars.GOOGLE_CLIENT_ID,
     envVars.GOOGLE_CLIENT_SECRET,
-    envVars.GOOGLE_CALLBACK_URL,
+    envVars.GOOGLE_ACCOUNT_CALLBACK_URL,
   )
 }
 

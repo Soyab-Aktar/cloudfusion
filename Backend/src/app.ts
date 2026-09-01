@@ -6,6 +6,11 @@ import cookieParser from "cookie-parser";
 import path from "path";
 import qs from "qs";
 
+// Global BigInt JSON serialization fix for Prisma BigInt fields
+(BigInt.prototype as any).toJSON = function () {
+  return this.toString();
+};
+
 const app: Application = express();
 
 app.set("query parser", (str: string) => qs.parse(str));
