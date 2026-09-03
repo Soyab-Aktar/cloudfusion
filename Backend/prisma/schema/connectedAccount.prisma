@@ -35,6 +35,8 @@ model ConnectedAccount {
   updatedAt             DateTime        @updatedAt
   providerConfig        ProviderConfig? @relation(fields: [providerConfigId], references: [id], onDelete: SetNull)
   user                  User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  folders               Folder[]
+  files                 File[]
 
   @@unique([userId, provider, providerAccountId])
   @@map("connectedAccounts")

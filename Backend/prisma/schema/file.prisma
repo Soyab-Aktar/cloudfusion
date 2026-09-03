@@ -1,0 +1,29 @@
+model File {
+  id                 String          @id @default(uuid())
+  name               String
+  size               BigInt
+  mimeType           String
+  extension          String?
+  userId             String
+  folderId           String?
+  connectedAccountId String
+  provider           StorageProvider @default(GOOGLE_DRIVE)
+  providerFileId     String
+  webContentLink     String?
+  webViewLink        String?
+  thumbnailLink      String?
+  isFavorite         Boolean         @default(false)
+  isTrash            Boolean         @default(false)
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
+
+  // Relationships
+  user             User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  folder           Folder?          @relation(fields: [folderId], references: [id], onDelete: Cascade)
+  connectedAccount ConnectedAccount @relation(fields: [connectedAccountId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([folderId])
+  @@index([connectedAccountId])
+  @@map("files")
+}

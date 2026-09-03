@@ -13,6 +13,8 @@ model User {
   sessions          Session[]
   accounts          Account[]
   connectedAccounts ConnectedAccount[]
+  files             File[]
+  folders           Folder[]
 
   @@map("user")
 }
