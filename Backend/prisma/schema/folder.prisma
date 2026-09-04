@@ -1,23 +1,23 @@
 model Folder {
-  id                String            @id @default(uuid())
-  name              String
-  userId            String
-  parentId          String?
-  connectedAcountId String?
-  providerFolderId  String?
-  isRoot            Boolean           @default(false)
-  isFavorite        Boolean           @default(false)
-  isTrash           Boolean           @default(false)
-  createdAt         DateTime          @default(now())
-  updatedAt         DateTime          @updatedAt
+  id                 String            @id @default(uuid())
+  name               String
+  userId             String
+  parentId           String?
+  connectedAccountId String?
+  providerFolderId   String?
+  isRoot             Boolean           @default(false)
+  isFavorite         Boolean           @default(false)
+  isTrash            Boolean           @default(false)
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
   // Relationships
-  user              User              @relation(fields: [userId], references: [id], onDelete: Cascade)
-  connectedAccount  ConnectedAccount? @relation(fields: [connectedAcountId], references: [id], onDelete: SetNull)
+  user               User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  connectedAccount   ConnectedAccount? @relation(fields: [connectedAccountId], references: [id], onDelete: SetNull)
   // Self-referencing tree relation (Parent -> Children)
-  parent            Folder?           @relation("FolderHierarchy", fields: [parentId], references: [id], onDelete: Cascade)
-  children          Folder[]          @relation("FolderHierarchy")
+  parent             Folder?           @relation("FolderHierarchy", fields: [parentId], references: [id], onDelete: Cascade)
+  children           Folder[]          @relation("FolderHierarchy")
   // Files contained inside this folder
-  files             File[]
+  files              File[]
 
   @@index([userId])
   @@index([parentId])
