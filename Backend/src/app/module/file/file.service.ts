@@ -4,9 +4,10 @@ import { prisma } from "../../lib/prisma";
 import { StorageAdapterFactory } from "../storage/storageAdapter.factory";
 import {
   ICreateFileMetadata,
-  IFileQueryFilters,
   IUpdateFileMetadata,
 } from "./file.interface";
+import { FileQueryParams } from "./file.querySchema";
+import { FileQueryBuilder } from "./file.queryBuilder";
 
 // 1. Create File Metadata Record
 const createFileRecord = async (payload: ICreateFileMetadata) => {
@@ -78,54 +79,16 @@ const createFileRecord = async (payload: ICreateFileMetadata) => {
   return file;
 };
 
-// 2. Get User Files (with optional filtering)
-const getUserFiles = async (userId: string, filters: IFileQueryFilters) => {
-  const { folderId, connectedAccountId, mimeType, isFavorite, isTrash, search } = filters;
-
-  const whereConditions: any = {
+// 2. Get User Files (with search, filter, sort, pagination via FileQueryBuilder)
+const getUserFiles = async (userId: string, params: FileQueryParams) => {
+  const result = await new FileQueryBuilder(prisma.file, params, {
     userId,
-    isTrash: isTrash !== undefined ? isTrash : false,
-  };
+    isTrash: params.isTrash ?? false,
+  })
+    .build()
+    .execute();
 
-  if (folderId !== undefined) {
-    whereConditions.folderId = folderId ? folderId : null;
-  }
-  if (connectedAccountId) {
-    whereConditions.connectedAccountId = connectedAccountId;
-  }
-  if (mimeType) {
-    whereConditions.mimeType = { contains: mimeType, mode: "insensitive" };
-  }
-  if (isFavorite !== undefined) {
-    whereConditions.isFavorite = isFavorite;
-  }
-  if (search) {
-    whereConditions.name = { contains: search, mode: "insensitive" };
-  }
-
-  const files = await prisma.file.findMany({
-    where: whereConditions,
-    include: {
-      connectedAccount: {
-        select: {
-          id: true,
-          provider: true,
-          email: true,
-        },
-      },
-      folder: {
-        select: {
-          id: true,
-          name: true,
-        },
-      },
-    },
-    orderBy: {
-      name: "asc",
-    },
-  });
-
-  return files;
+  return result;
 };
 
 // 3. Get Single File Details by ID

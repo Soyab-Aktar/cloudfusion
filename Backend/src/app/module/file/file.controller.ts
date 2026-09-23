@@ -3,6 +3,7 @@ import status from "http-status";
 import { FileService } from "./file.service";
 import { catchAsync } from "../../shared/catchAsync";
 import { sendResponse } from "../../shared/sendResponse";
+import { fileQuerySchema } from "./file.querySchema";
 
 const createFile = catchAsync(async (req: Request, res: Response) => {
   const userId = req.user!.userId;
@@ -21,28 +22,15 @@ const createFile = catchAsync(async (req: Request, res: Response) => {
 
 const getUserFiles = catchAsync(async (req: Request, res: Response) => {
   const userId = req.user!.userId;
-  const filters = {
-    folderId: req.query.folderId as string | undefined,
-    connectedAccountId: req.query.connectedAccountId as string | undefined,
-    mimeType: req.query.mimeType as string | undefined,
-    isFavorite:
-      req.query.isFavorite !== undefined
-        ? req.query.isFavorite === "true"
-        : undefined,
-    isTrash:
-      req.query.isTrash !== undefined
-        ? req.query.isTrash === "true"
-        : undefined,
-    search: req.query.search as string | undefined,
-  };
-
-  const result = await FileService.getUserFiles(userId, filters);
+  const params = fileQuerySchema.parse(req.query);
+  const result = await FileService.getUserFiles(userId, params);
 
   sendResponse(res, {
     httpStatusCode: status.OK,
     success: true,
     message: "User files retrieved successfully",
-    data: result,
+    data: result.data,
+    meta: result.meta,
   });
 });
 
