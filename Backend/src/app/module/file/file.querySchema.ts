@@ -20,7 +20,8 @@ export const fileQuerySchema = z.object({
     .optional(),
   mimeType: z.string().optional(),
   extension: z.string().optional(),
-  folderId: z.string().optional(), // filter files inside a specific folder (undefined = all files)
+  folderId: z.string().optional(), // specific folder ID, or "root" / "null" for root files
+  isRoot: z.coerce.boolean().optional(), // if true, returns files where folderId is null
   isTrash: z.coerce.boolean().optional(),
   isFavorite: z.coerce.boolean().optional(),
   connectedAccountId: z.string().optional(),

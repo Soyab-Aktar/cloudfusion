@@ -38,7 +38,8 @@ const getUserFolders = catchAsync(async (req: Request, res: Response) => {
   }
 
   const parentId = req.query.parentId as string | undefined;
-  const result = await FolderService.getUserFolders(userId, parentId);
+  const search = req.query.search as string | undefined;
+  const result = await FolderService.getUserFolders(userId, parentId, search);
 
   sendResponse(res, {
     httpStatusCode: status.OK,

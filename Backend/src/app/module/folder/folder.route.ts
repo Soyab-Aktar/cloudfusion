@@ -7,9 +7,6 @@ import { Role } from "../../../generated/prisma/enums";
 
 const router = Router();
 
-// Apply auth middleware to all folder routes
-router.use(checkAuth());
-
 router.post(
   "/",
   checkAuth(Role.USER),

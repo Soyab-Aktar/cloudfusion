@@ -56,13 +56,20 @@ const createFolder = async (payload: ICreateFolder) => {
   return folder;
 }
 
-const getUserFolders = async (userId: string, parentId?: string) => {
+const getUserFolders = async (userId: string, parentId?: string, search?: string) => {
+  const whereConditions: any = {
+    userId,
+    isTrash: false,
+  };
+
+  if (search) {
+    whereConditions.name = { contains: search, mode: "insensitive" };
+  } else if (parentId !== undefined) {
+    whereConditions.parentId = parentId ? parentId : null;
+  }
+
   const folders = await prisma.folder.findMany({
-    where: {
-      userId,
-      parentId: parentId ? parentId : null,
-      isTrash: false,
-    },
+    where: whereConditions,
     include: {
       connectedAccount: {
         select: {

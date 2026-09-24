@@ -34,6 +34,20 @@ const getUserFiles = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+const searchFiles = catchAsync(async (req: Request, res: Response) => {
+  const userId = req.user!.userId;
+  const params = fileQuerySchema.parse(req.query);
+  const result = await FileService.getUserFiles(userId, params);
+
+  sendResponse(res, {
+    httpStatusCode: status.OK,
+    success: true,
+    message: "Files searched successfully",
+    data: result.data,
+    meta: result.meta,
+  });
+});
+
 const getFileDetails = catchAsync(async (req: Request, res: Response) => {
   const userId = req.user!.userId;
   const fileId = req.params.id as string;
@@ -103,6 +117,7 @@ const deleteFile = catchAsync(async (req: Request, res: Response) => {
 export const FileController = {
   createFile,
   getUserFiles,
+  searchFiles,
   getFileDetails,
   updateFile,
   toggleFavorite,

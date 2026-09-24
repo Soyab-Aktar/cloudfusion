@@ -14,6 +14,9 @@ router.post(
   FileController.createFile
 );
 
+// Search endpoint must be placed before /:id to prevent route collision
+router.get("/search", checkAuth(Role.USER), FileController.searchFiles);
+
 router.get("/", checkAuth(Role.USER), FileController.getUserFiles);
 router.get("/:id", checkAuth(Role.USER), FileController.getFileDetails);
 

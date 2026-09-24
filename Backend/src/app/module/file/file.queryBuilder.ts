@@ -45,18 +45,38 @@ export class FileQueryBuilder<T = unknown> {
   }
 
   private applyDirectFilters() {
-    const { mimeType, extension, isTrash, isFavorite, connectedAccountId, folderId } =
-      this.params;
+    const {
+      mimeType,
+      extension,
+      isTrash,
+      isFavorite,
+      connectedAccountId,
+      folderId,
+      isRoot,
+    } = this.params;
 
-    if (mimeType) this.where.mimeType = mimeType;
-    if (extension) this.where.extension = extension;
+    if (mimeType) {
+      this.where.mimeType = { contains: mimeType, mode: "insensitive" };
+    }
+    if (extension) {
+      this.where.extension = {
+        equals: extension.replace(/^\./, ""),
+        mode: "insensitive",
+      };
+    }
     if (isTrash !== undefined) this.where.isTrash = isTrash;
     if (isFavorite !== undefined) this.where.isFavorite = isFavorite;
     if (connectedAccountId) this.where.connectedAccountId = connectedAccountId;
 
-    // folderId: if provided, show files in that folder
-    // if not provided, don't filter by folder (show all files)
-    if (folderId) this.where.folderId = folderId;
+    // folderId / isRoot filtering:
+    // 1. isRoot is true, or folderId is "root"/"null" -> root files only (folderId: null)
+    // 2. folderId is a specific ID -> files in that folder
+    // 3. neither provided -> all files (no folder filter)
+    if (isRoot || folderId === "root" || folderId === "null") {
+      this.where.folderId = null;
+    } else if (folderId) {
+      this.where.folderId = folderId;
+    }
   }
 
   private applyProviderFilter() {
@@ -106,7 +126,19 @@ export class FileQueryBuilder<T = unknown> {
         skip: this.skip,
         take: this.params.limit,
         include: {
-          connectedAccount: { select: { provider: true, email: true } },
+          connectedAccount: {
+            select: {
+              id: true,
+              provider: true,
+              email: true,
+            },
+          },
+          folder: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
         },
       }),
     ]);
