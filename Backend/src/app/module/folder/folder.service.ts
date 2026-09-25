@@ -7,37 +7,49 @@ import { StorageAdapterFactory } from "../storage/storageAdapter.factory";
 const createFolder = async (payload: ICreateFolder) => {
   const { userId, name, parentId, connectedAccountId } = payload;
   let providerFolderId: string | undefined = undefined;
+  let targetParentDbId: string | null = parentId || null;
+  let targetParentProviderId: string | undefined = undefined;
 
+  // 1. If explicit parentId is given, validate and use it
   if (parentId) {
     const parentFolder = await prisma.folder.findFirst({
-      where: {
-        id: parentId,
-        userId: userId,
-      },
+      where: { id: parentId, userId },
     });
     if (!parentFolder) {
       throw new AppError(status.NOT_FOUND, "Parent folder not found");
     }
+    targetParentProviderId = parentFolder.providerFolderId ?? undefined;
+    targetParentDbId = parentFolder.id;
+  }
+  // 2. If NO parentId is given, default to the "CloudFusion Workspace" root folder!
+  else if (connectedAccountId) {
+    const rootWorkspace = await prisma.folder.findFirst({
+      where: {
+        userId,
+        connectedAccountId,
+        isRoot: true,
+      },
+    });
+
+    if (rootWorkspace) {
+      targetParentProviderId = rootWorkspace.providerFolderId ?? undefined;
+      targetParentDbId = rootWorkspace.id;
+    }
   }
 
+  // 3. Create the physical folder in the cloud inside the resolved parent
   if (connectedAccountId) {
     const adapter = await StorageAdapterFactory.getAdapter(userId, connectedAccountId);
-    let parentProviderFolderId: string | undefined = undefined;
-    if (parentId) {
-      const parentFolder = await prisma.folder.findUnique({
-        where: { id: parentId },
-      });
-      parentProviderFolderId = parentFolder?.providerFolderId ?? undefined;
-    }
-    const cloudFolder = await adapter.createFolder(name, parentProviderFolderId);
+    const cloudFolder = await adapter.createFolder(name, targetParentProviderId);
     providerFolderId = cloudFolder.providerFileId;
   }
 
+  // 4. Save to PostgreSQL database with the resolved parentId
   const folder = await prisma.folder.create({
     data: {
       name,
       userId,
-      parentId: parentId || null,
+      parentId: targetParentDbId,
       connectedAccountId: connectedAccountId || null,
       providerFolderId: providerFolderId || null,
     },
@@ -48,13 +60,14 @@ const createFolder = async (payload: ICreateFolder) => {
           provider: true,
           email: true,
           displayName: true,
-        }
-      }
-    }
+        },
+      },
+    },
   });
 
   return folder;
-}
+};
+
 
 const getUserFolders = async (userId: string, parentId?: string, search?: string) => {
   const whereConditions: any = {

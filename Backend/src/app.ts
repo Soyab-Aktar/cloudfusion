@@ -6,6 +6,8 @@ import cookieParser from "cookie-parser";
 import path from "path";
 import qs from "qs";
 
+import { globalErrorHandler } from "./app/errorHelpers/globalErrorHandler";
+
 // Global BigInt JSON serialization fix for Prisma BigInt fields
 (BigInt.prototype as any).toJSON = function () {
   return this.toString();
@@ -31,5 +33,8 @@ app.use("/api/v1", IndexRoutes);
 app.get('/', (req: Request, res: Response) => {
   res.send('Hello, TypeScript + Express!');
 });
+
+// Global error handler
+app.use(globalErrorHandler);
 
 export default app;

@@ -8,21 +8,20 @@ import { GoogleDriveAdapter } from "./adapters/googleDrive.adapter";
 export class StorageAdapterFactory {
   /**
    * Retrieves storage adapter for connected account
+   * @param userId - Authenticated user ID for ownership check
    * @param accountId - Connected account ID in DB
-   * @param userId - Optional authenticated user ID for ownership check
    */
-
-  static async getAdapter(accountId: string, usedId: string): Promise<IStorageAdapter> {
+  static async getAdapter(userId: string, accountId: string): Promise<IStorageAdapter> {
     const account = await prisma.connectedAccount.findUnique({
       where: {
-        id: accountId
-      }
+        id: accountId,
+      },
     });
 
     if (!account || account.status !== AccountStatus.CONNECTED) {
       throw new AppError(status.NOT_FOUND, "Connected storage account not found or is disconnected");
     }
-    if (usedId && account.userId !== usedId) {
+    if (userId && account.userId !== userId) {
       throw new AppError(status.FORBIDDEN, "Access denied. You do not own this storage account");
     }
 
