@@ -103,6 +103,19 @@ export class GoogleDriveAdapter implements IStorageAdapter {
     await drive.files.delete({ fileId: providerFileId });
   }
 
+  // Rename File/Folder from Google Drive
+  async renameFile(providerFileId: string, newName: string): Promise<CloudFileMetaData> {
+    const drive = await this.getDriveClient();
+    const response = await drive.files.update({
+      fileId: providerFileId,
+      requestBody: {
+        name: newName,
+      },
+      fields: "id, name, mimeType, size, parents, webViewLink, thumbnailLink, createdTime, modifiedTime",
+    });
+    return this.formatFileMetadata(response.data);
+  }
+
   // Create Folder in Google Drive
   async createFolder(
     name: string,

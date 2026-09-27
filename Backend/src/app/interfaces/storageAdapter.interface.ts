@@ -33,5 +33,6 @@ export interface IStorageAdapter {
   uploadFile(input: UploadFileInput): Promise<CloudFileMetaData>;
   downloadFile(providerFileId: string): Promise<Readable>;
   deleteFile(providerFileId: string): Promise<void>;
+  renameFile(providerFileId: string, newName: string): Promise<CloudFileMetaData>;
   createFolder(name: string, parentProviderFolderId?: string): Promise<CloudFileMetaData>;
 }

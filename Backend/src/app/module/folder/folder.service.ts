@@ -140,6 +140,18 @@ const renameFolder = async (payload: IRenameFolder) => {
   if (!folder) {
     throw new AppError(status.NOT_FOUND, "Folder not found");
   }
+  if (folder.isRoot) {
+    throw new AppError(status.BAD_REQUEST, "Cannot rename the root workspace folder");
+  }
+
+  if (folder.connectedAccountId && folder.providerFolderId) {
+    try {
+      const adapter = await StorageAdapterFactory.getAdapter(userId, folder.connectedAccountId);
+      await adapter.renameFile(folder.providerFolderId, newName);
+    } catch (err) {
+      console.warn("Failed to rename physical folder in cloud, continuing DB rename:", err);
+    }
+  }
 
   const updatedFolder = await prisma.folder.update({
     where: {
