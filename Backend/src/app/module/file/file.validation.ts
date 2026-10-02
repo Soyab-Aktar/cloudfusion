@@ -6,7 +6,7 @@ const createFileMetadataZodSchema = z.object({
   mimeType: z.string().min(1, "MIME type is required"),
   extension: z.string().optional().nullable(),
   folderId: z.string().optional().nullable(),
-  connectedAccountId: z.string().uuid("Invalid connected account ID"),
+  connectedAccountId: z.uuid("Invalid connected account ID"),
   providerFileId: z.string().min(1, "Provider file ID is required"),
   webContentLink: z.string().url().optional().nullable(),
   webViewLink: z.string().url().optional().nullable(),
@@ -15,6 +15,7 @@ const createFileMetadataZodSchema = z.object({
 
 const updateFileMetadataZodSchema = z.object({
   name: z.string().min(1, "File name cannot be empty").optional(),
+  folderId: z.uuid("Invalid folder ID").optional().nullable(),
   isFavorite: z.boolean().optional(),
   isTrash: z.boolean().optional(),
 });

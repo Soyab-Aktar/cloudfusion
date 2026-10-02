@@ -50,7 +50,7 @@ const createFileRecord = async (payload: ICreateFileMetadata) => {
       mimeType,
       extension: extension ?? null,
       userId,
-      folderId: folderId ?? null,
+      folderId: folderId || null,
       connectedAccountId,
       provider: account.provider,
       providerFileId,
@@ -132,6 +132,15 @@ const updateFileRecord = async (
 
   if (!file) {
     throw new AppError(status.NOT_FOUND, "File not found");
+  }
+
+  if (payload.name && file.connectedAccountId && file.providerFileId) {
+    try {
+      const adapter = await StorageAdapterFactory.getAdapter(userId, file.connectedAccountId);
+      await adapter.renameFile(file.providerFileId, payload.name);
+    } catch (err) {
+      console.warn("Failed to rename physical file in cloud:", err);
+    }
   }
 
   const updatedFile = await prisma.file.update({

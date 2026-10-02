@@ -14,6 +14,7 @@ export interface ICreateFileMetadata {
 
 export interface IUpdateFileMetadata {
   name?: string;
+  folderId?: string | null;
   isFavorite?: boolean;
   isTrash?: boolean;
 }
