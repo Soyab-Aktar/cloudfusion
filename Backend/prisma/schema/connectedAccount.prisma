@@ -37,6 +37,7 @@ model ConnectedAccount {
   user                  User            @relation(fields: [userId], references: [id], onDelete: Cascade)
   folders               Folder[]
   files                 File[]
+  uploadSessions        UploadSession[]
 
   @@unique([userId, provider, providerAccountId])
   @@map("connectedAccounts")

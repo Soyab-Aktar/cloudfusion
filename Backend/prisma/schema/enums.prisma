@@ -22,3 +22,10 @@ enum AccountStatus {
   EXPIRED
   ERROR
 }
+
+enum UploadStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  FAILED
+}

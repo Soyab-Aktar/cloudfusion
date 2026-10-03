@@ -15,6 +15,7 @@ model User {
   connectedAccounts ConnectedAccount[]
   files             File[]
   folders           Folder[]
+  uploadSessions    UploadSession[]
 
   @@map("user")
 }
