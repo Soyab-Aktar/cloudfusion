@@ -114,6 +114,33 @@ const deleteFile = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+const downloadFile = catchAsync(async (req: Request, res: Response) => {
+  const userId = req.user!.userId;
+  const fileId = req.params.id as string;
+
+  const disposition = (req.query.disposition as string) === 'attachment' ? "attachment" : "inline";
+
+  const { stream, mimeType, fileName, size } = await FileService.getFileStream(userId, fileId);
+
+  res.setHeader("Content-Type", mimeType);
+  res.setHeader("Content-Disposition",
+    `${disposition}; filename="${encodeURIComponent(fileName)}"`
+  );
+
+  if (size) {
+    res.setHeader("Content-Length", size.toString());
+  }
+
+  stream.pipe(res);
+
+  stream.on("error", (err) => {
+    console.error("Stream error during file download:", err);
+    if (!res.headersSent) {
+      res.status(500).json({ success: false, message: "Stream failed" });
+    }
+  });
+});
+
 export const FileController = {
   createFile,
   getUserFiles,
@@ -123,4 +150,5 @@ export const FileController = {
   toggleFavorite,
   toggleTrash,
   deleteFile,
+  downloadFile,
 };

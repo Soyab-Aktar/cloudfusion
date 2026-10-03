@@ -226,6 +226,33 @@ const deleteFileRecord = async (userId: string, fileId: string) => {
   return null;
 };
 
+const getFileStream = async (userId: string, fileId: string) => {
+  const file = await prisma.file.findFirst({
+    where: {
+      id: fileId,
+      userId,
+    }
+  });
+
+  if (!file) {
+    throw new AppError(status.NOT_FOUND, "File not Found");
+  }
+
+  if (!file.connectedAccountId || !file.providerFileId) {
+    throw new AppError(status.BAD_REQUEST, "File has no associated cloud storage record");
+  }
+
+  const adapter = await StorageAdapterFactory.getAdapter(userId, file.connectedAccountId);
+  const stream = await adapter.downloadFile(file.providerFileId);
+
+  return {
+    stream,
+    mimeType: file.mimeType,
+    fileName: file.name,
+    size: file.size,
+  }
+}
+
 export const FileService = {
   createFileRecord,
   getUserFiles,
@@ -234,4 +261,5 @@ export const FileService = {
   toggleFavoriteFile,
   toggleTrashFile,
   deleteFileRecord,
+  getFileStream,
 };
