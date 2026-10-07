@@ -7,8 +7,9 @@ import path from "path";
 import qs from "qs";
 import cors from "cors";
 
-import { globalErrorHandler } from "./app/errorHelpers/globalErrorHandler";
 import { envVars } from "./app/config/env";
+import { notfound } from "./app/middleware/notFound";
+import { globalErrorHandler } from "./app/middleware/globalErrorHandler";
 
 // Global BigInt JSON serialization fix for Prisma BigInt fields
 (BigInt.prototype as any).toJSON = function () {
@@ -35,12 +36,13 @@ app.use(express.json());
 app.use(cookieParser());
 app.use("/api/v1", IndexRoutes);
 
-// Basic route
+
 app.get('/', (req: Request, res: Response) => {
-  res.send('Hello, TypeScript + Express!');
+  res.send('Hello, Welcome to CloudFusion');
 });
 
-// Global error handler
+
+app.use(notfound);
 app.use(globalErrorHandler);
 
 export default app;
