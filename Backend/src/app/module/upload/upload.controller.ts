@@ -56,12 +56,20 @@ const parseUploadStream = (
       fileReceived = true;
 
       const counter = new ByteCounter();
-      const passThrough = new PassThrough();
+      const passThrough = new PassThrough({ highWaterMark: 10 * 1024 * 1024 }); // 10MB buffer
+
+      passThrough.on("error", () => { });
+
+      // Guard: ensure we only call reject() once
+      let rejected = false;
+      const rejectOnce = (err: unknown) => {
+        if (!rejected) { rejected = true; reject(err); }
+      };
 
       // Propagate file stream errors to passThrough
       file.on("error", (err) => {
         passThrough.destroy(err);
-        reject(err);
+        rejectOnce(err);
       });
 
       // File size limit hit — return 413
@@ -72,13 +80,15 @@ const parseUploadStream = (
         );
         file.resume(); // drain so busboy doesn't hang
         passThrough.destroy(err);
-        reject(err);
+        rejectOnce(err);
       });
 
-      // Client disconnected mid-upload
+      // Client disconnected — destroy stream silently (no error arg)
+      // Passing an error arg emits 'error' even after our listener is attached,
+      // which can still propagate up through pipe chains and crash the server.
       req.on("close", () => {
         if (!passThrough.writableEnded) {
-          passThrough.destroy(new Error("Client disconnected mid-upload"));
+          passThrough.destroy(); // silent destroy — no error event emitted
         }
       });
 
