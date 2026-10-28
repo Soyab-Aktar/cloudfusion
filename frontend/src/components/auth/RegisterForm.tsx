@@ -6,7 +6,8 @@ import { Input } from '../ui/input';
 import { useForm } from '@tanstack/react-form-nextjs';
 import { Label } from '../ui/label';
 import { MdLockOutline, MdOutlineEmail, MdPersonOutline } from 'react-icons/md';
-import { FaEye, FaEyeSlash } from 'react-icons/fa';
+import { FaArrowRight, FaEye, FaEyeSlash } from 'react-icons/fa';
+import { FcGoogle } from 'react-icons/fc';
 import { Button } from '../ui/button';
 import Link from 'next/link';
 
@@ -47,7 +48,7 @@ export const RegisterForm = () => {
         e.stopPropagation();
         form.handleSubmit();
       }}
-      className="mt-5 flex flex-col gap-4"
+      className="mt-6 flex flex-col gap-4"
     >
       {/* Full Name */}
       <form.Field name="name">
@@ -62,15 +63,16 @@ export const RegisterForm = () => {
               error={hasError ? field.state.meta.errors[0] : undefined}
             >
               <div className="relative">
-                <MdPersonOutline className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-text-muted text-[20px] pointer-events-none" />
+                <MdPersonOutline className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted text-[20px] pointer-events-none" />
                 <Input
                   id="reg-name"
                   type="text"
+                  autoComplete="name"
                   value={field.state.value}
                   onBlur={field.handleBlur}
                   onChange={(e) => field.handleChange(e.target.value)}
                   placeholder="Sarah Jenkins"
-                  className="pl-10"
+                  className="h-11 pl-10 pr-4"
                 />
               </div>
             </FormField>
@@ -91,15 +93,17 @@ export const RegisterForm = () => {
               error={hasError ? field.state.meta.errors[0] : undefined}
             >
               <div className="relative">
-                <MdOutlineEmail className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-text-muted text-[20px] pointer-events-none" />
+                <MdOutlineEmail className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted text-[20px] pointer-events-none" />
                 <Input
                   id="reg-email"
                   type="email"
+                  autoComplete="email"
+                  inputMode="email"
                   value={field.state.value}
                   onBlur={field.handleBlur}
                   onChange={(e) => field.handleChange(e.target.value)}
                   placeholder="sarah@work.com"
-                  className="pl-10"
+                  className="h-11 pl-10 pr-4"
                 />
               </div>
             </FormField>
@@ -141,26 +145,31 @@ export const RegisterForm = () => {
                 </form.Subscribe>
               </div>
               <div className="relative">
-                <MdLockOutline className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-text-muted text-[20px] pointer-events-none" />
+                <MdLockOutline className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted text-[20px] pointer-events-none" />
                 <Input
                   id="reg-pwd"
                   type={showPassword ? 'text' : 'password'}
+                  autoComplete="new-password"
                   value={field.state.value}
                   onBlur={field.handleBlur}
                   onChange={(e) => field.handleChange(e.target.value)}
                   placeholder="••••••••••••"
-                  className="pl-10 pr-10"
+                  className="h-11 pl-10 pr-11"
                 />
                 <Button
                   type="button"
                   variant="ghost"
                   size="icon"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8 text-text-muted hover:text-text-main"
+                  className="absolute right-1.5 inset-y-0 my-auto h-8 w-8 text-text-muted hover:text-text-main transition-colors active:translate-y-0 active:not-aria-[haspopup]:translate-y-0 cursor-pointer"
+                  title={showPassword ? 'Hide password' : 'Show password'}
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
                 >
-                  <span className="material-symbols-outlined text-[18px]">
-                    {showPassword ? <FaEyeSlash /> : <FaEye />}
-                  </span>
+                  {showPassword ? (
+                    <FaEyeSlash className="size-4" />
+                  ) : (
+                    <FaEye className="size-4" />
+                  )}
                 </Button>
               </div>
 
@@ -203,7 +212,6 @@ export const RegisterForm = () => {
         }}
       </form.Field>
 
-
       {/* Submit CTA */}
       <form.Subscribe
         selector={(state) => [state.isSubmitting]}
@@ -212,21 +220,40 @@ export const RegisterForm = () => {
           <Button
             type="submit"
             disabled={isSubmitting || authenticated}
-            className="w-full h-11 mt-1 font-medium text-sm shadow-sm flex items-center justify-center gap-2"
+            className="w-full h-11 mt-1 font-medium text-sm shadow-sm flex items-center justify-center gap-2 cursor-pointer"
           >
             {isSubmitting ? (
-              <span>Creating account...</span>
+              <>
+                <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                <span>Creating account...</span>
+              </>
             ) : (
               <>
                 <span>Create Account</span>
-                <span className="material-symbols-outlined text-[18px]">
-                  arrow_forward
-                </span>
+                <FaArrowRight className="size-4" />
               </>
             )}
           </Button>
         )}
       </form.Subscribe>
+
+      {/* Divider */}
+      <div className="relative my-2 flex items-center justify-center">
+        <div className="w-full h-px bg-border-subtle" />
+        <span className="absolute bg-surface px-3 text-xs text-text-muted">
+          or sign up with
+        </span>
+      </div>
+
+      {/* Social Signup */}
+      <Button
+        type="button"
+        variant="outline"
+        className="w-full h-11 bg-app-bg hover:bg-slate-200 text-text-main text-xs sm:text-sm font-semibold flex items-center justify-center gap-3 border-border-subtle shadow-xs cursor-pointer"
+      >
+        <FcGoogle />
+        <span>Continue with Google</span>
+      </Button>
 
       <div className="mt-2 text-center text-xs text-text-muted">
         Already have an account?{' '}

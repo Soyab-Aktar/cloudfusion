@@ -8,7 +8,7 @@ import { useState } from "react";
 import { FcGoogle } from "react-icons/fc";
 import Link from "next/link";
 import { MdLockOutline, MdOutlineEmail } from "react-icons/md";
-import { FaArrowRight, FaEye, FaEyeSlash } from "react-icons/fa";
+import { FaArrowRight, FaCheck, FaEye, FaEyeSlash } from "react-icons/fa";
 
 
 
@@ -56,10 +56,12 @@ export const SignInForm = () => {
               error={hasError ? field.state.meta.errors[0] : undefined}
             >
               <div className="relative">
-                <MdOutlineEmail className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-text-muted text-[20px] pointer-events-none" />
+                <MdOutlineEmail className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted text-[20px] pointer-events-none" />
                 <Input
                   id="login-email"
                   type="email"
+                  autoComplete="email"
+                  inputMode="email"
                   value={field.state.value}
                   onBlur={field.handleBlur}
                   onChange={(e) => field.handleChange(e.target.value)}
@@ -93,10 +95,11 @@ export const SignInForm = () => {
               error={hasError ? field.state.meta.errors[0] : undefined}
             >
               <div className="relative">
-                <MdLockOutline className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-text-muted text-[20px] pointer-events-none" />
+                <MdLockOutline className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted text-[20px] pointer-events-none" />
                 <Input
                   id="login-password"
                   type={showPassword ? 'text' : 'password'}
+                  autoComplete="current-password"
                   value={field.state.value}
                   onBlur={field.handleBlur}
                   onChange={(e) => field.handleChange(e.target.value)}
@@ -108,12 +111,15 @@ export const SignInForm = () => {
                   variant="ghost"
                   size="icon"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-1.5 top-1/2 -translate-y-1/2 h-8 w-8 text-text-muted hover:text-text-main"
+                  className="absolute right-1.5 inset-y-0 my-auto h-8 w-8 text-text-muted hover:text-text-main transition-colors active:translate-y-0 active:not-aria-[haspopup]:translate-y-0 cursor-pointer"
                   title={showPassword ? 'Hide password' : 'Show password'}
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
                 >
-                  <span className="material-symbols-outlined text-[18px]">
-                    {showPassword ? <FaEyeSlash /> : <FaEye />}
-                  </span>
+                  {showPassword ? (
+                    <FaEyeSlash className="size-4" />
+                  ) : (
+                    <FaEye className="size-4" />
+                  )}
                 </Button>
               </div>
             </FormField>
@@ -131,7 +137,7 @@ export const SignInForm = () => {
             <Button
               type="submit"
               disabled={loading || authenticated}
-              className={`w-full h-11 mt-1 font-medium text-sm shadow-sm flex items-center justify-center gap-2 ${authenticated
+              className={`w-full h-11 mt-1 font-medium text-sm shadow-sm flex items-center justify-center gap-2 cursor-pointer ${authenticated
                 ? 'bg-status-success hover:bg-status-success text-white'
                 : ''
                 }`}
@@ -143,15 +149,13 @@ export const SignInForm = () => {
                 </>
               ) : authenticated ? (
                 <>
-                  <span className="material-symbols-outlined text-[18px]">
-                    check
-                  </span>
+                  <FaCheck className="size-4" />
                   <span>Authenticated</span>
                 </>
               ) : (
                 <>
                   <span>Sign In</span>
-                  <FaArrowRight className="material-symbols-outlined text-[18px]" />
+                  <FaArrowRight className="size-4" />
                 </>
               )}
             </Button>
@@ -171,7 +175,7 @@ export const SignInForm = () => {
       <Button
         type="button"
         variant="outline"
-        className="w-full h-11 bg-app-bg hover:bg-slate-200 text-text-main text-xs sm:text-sm font-semibold flex items-center justify-center gap-3 border-border-subtle shadow-xs"
+        className="w-full h-11 bg-app-bg hover:bg-slate-200 text-text-main text-xs sm:text-sm font-semibold flex items-center justify-center gap-3 border-border-subtle shadow-xs cursor-pointer"
       >
         <FcGoogle />
         <span>Continue with Google</span>

@@ -39,8 +39,8 @@ export const VerifyEmailForm = () => {
       className="mt-6 flex flex-col gap-4"
     >
       {isVerified ? (
-        <div className="flex flex-col gap-2 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-center text-status-success">
-          <RiMailCheckLine className="material-symbols-outlined mx-auto text-[28px]" />
+        <div className="flex flex-col gap-2 rounded-xl border border-emerald-200 bg-emerald-50 dark:bg-emerald-950/30 dark:border-emerald-800/40 p-4 text-center text-status-success">
+          <RiMailCheckLine className="mx-auto text-[28px]" />
           <span className="text-sm font-semibold">
             Email verified successfully!
           </span>
@@ -50,7 +50,7 @@ export const VerifyEmailForm = () => {
           <Button
             type="button"
             variant="link"
-            className="mt-2 h-auto p-0 text-xs font-semibold text-primary"
+            className="mt-2 h-auto p-0 text-xs font-semibold text-primary cursor-pointer"
           >
             <Link href="/login">Continue to Sign In</Link>
           </Button>
@@ -71,7 +71,7 @@ export const VerifyEmailForm = () => {
                     hasError ? String(field.state.meta.errors[0]) : undefined
                   }
                 >
-                  <div className="flex justify-center">
+                  <div className="flex justify-center w-full">
                     <InputOTP
                       id="verify-otp"
                       maxLength={6}
@@ -80,30 +80,30 @@ export const VerifyEmailForm = () => {
                       onChange={(value) => field.handleChange(value)}
                       containerClassName="w-full justify-between"
                     >
-                      <InputOTPGroup className="w-full justify-between gap-2">
+                      <InputOTPGroup className="w-full justify-between gap-1.5 sm:gap-2">
                         <InputOTPSlot
                           index={0}
-                          className="h-11 flex-1 rounded-md border"
+                          className="h-11 flex-1 rounded-md border text-base sm:text-lg font-semibold"
                         />
                         <InputOTPSlot
                           index={1}
-                          className="h-11 flex-1 rounded-md border"
+                          className="h-11 flex-1 rounded-md border text-base sm:text-lg font-semibold"
                         />
                         <InputOTPSlot
                           index={2}
-                          className="h-11 flex-1 rounded-md border"
+                          className="h-11 flex-1 rounded-md border text-base sm:text-lg font-semibold"
                         />
                         <InputOTPSlot
                           index={3}
-                          className="h-11 flex-1 rounded-md border"
+                          className="h-11 flex-1 rounded-md border text-base sm:text-lg font-semibold"
                         />
                         <InputOTPSlot
                           index={4}
-                          className="h-11 flex-1 rounded-md border"
+                          className="h-11 flex-1 rounded-md border text-base sm:text-lg font-semibold"
                         />
                         <InputOTPSlot
                           index={5}
-                          className="h-11 flex-1 rounded-md border"
+                          className="h-11 flex-1 rounded-md border text-base sm:text-lg font-semibold"
                         />
                       </InputOTPGroup>
                     </InputOTP>
@@ -118,9 +118,16 @@ export const VerifyEmailForm = () => {
               <Button
                 type="submit"
                 disabled={isSubmitting}
-                className="flex h-11 w-full items-center justify-center gap-2 text-sm font-medium shadow-sm"
+                className="flex h-11 w-full items-center justify-center gap-2 text-sm font-medium shadow-sm cursor-pointer"
               >
-                {isSubmitting ? 'Verifying...' : 'Verify Email'}
+                {isSubmitting ? (
+                  <>
+                    <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    <span>Verifying...</span>
+                  </>
+                ) : (
+                  'Verify Email'
+                )}
               </Button>
             )}
           </form.Subscribe>
@@ -130,7 +137,7 @@ export const VerifyEmailForm = () => {
             <button
               type="button"
               onClick={() => console.log('Resend OTP triggered')}
-              className="ml-1 text-xs font-semibold text-primary hover:text-primary-hover"
+              className="ml-1 text-xs font-semibold text-primary hover:text-primary-hover cursor-pointer"
             >
               Resend
             </button>

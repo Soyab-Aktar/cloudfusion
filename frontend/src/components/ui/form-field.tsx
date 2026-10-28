@@ -1,6 +1,7 @@
 import * as React from 'react';
 import { cn } from '@/lib/utils';
 import { Label } from './label';
+import { MdErrorOutline } from 'react-icons/md';
 
 export function getErrorMessage(error: unknown): string | null {
   if (!error) return null;
@@ -44,7 +45,7 @@ export const FieldError = React.forwardRef<
       )}
       {...props}
     >
-      <span className="material-symbols-outlined text-[14px]">error</span>
+      <MdErrorOutline className="size-3.5 shrink-0" />
       <span>{message}</span>
     </p>
   );

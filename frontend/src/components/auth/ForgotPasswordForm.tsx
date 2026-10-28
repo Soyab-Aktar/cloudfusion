@@ -43,8 +43,8 @@ export const ForgotPasswordForm = () => {
       className="mt-6 flex flex-col gap-4"
     >
       {forgotSubmitted ? (
-        <div className="flex flex-col gap-2 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-center text-status-success">
-          <RiMailCheckLine className="material-symbols-outlined mx-auto text-[28px]" />
+        <div className="flex flex-col gap-2 rounded-xl border border-emerald-200 bg-emerald-50 dark:bg-emerald-950/30 dark:border-emerald-800/40 p-4 text-center text-status-success">
+          <RiMailCheckLine className="mx-auto text-[28px]" />
 
           <span className="text-sm font-semibold">
             Password recovery email sent!
@@ -58,7 +58,7 @@ export const ForgotPasswordForm = () => {
           <Button
             type="button"
             variant="link"
-            className="mt-2 h-auto p-0 text-xs font-semibold text-primary"
+            className="mt-2 h-auto p-0 text-xs font-semibold text-primary cursor-pointer"
           >
             <Link href="/login">Back to Sign In</Link>
           </Button>
@@ -82,12 +82,13 @@ export const ForgotPasswordForm = () => {
                   }
                 >
                   <div className="relative">
-                    <MdOutlineEmail className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-text-muted text-[20px] pointer-events-none" />
+                    <MdOutlineEmail className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted text-[20px] pointer-events-none" />
 
                     <Input
                       id="forgot-email"
                       type="email"
                       autoComplete="email"
+                      inputMode="email"
                       value={field.state.value}
                       onBlur={field.handleBlur}
                       onChange={(e) => field.handleChange(e.target.value)}
@@ -107,9 +108,16 @@ export const ForgotPasswordForm = () => {
               <Button
                 type="submit"
                 disabled={isSubmitting}
-                className="flex h-11 w-full items-center justify-center gap-2 text-sm font-medium shadow-sm"
+                className="flex h-11 w-full items-center justify-center gap-2 text-sm font-medium shadow-sm cursor-pointer"
               >
-                {isSubmitting ? 'Sending link...' : 'Send Reset Link'}
+                {isSubmitting ? (
+                  <>
+                    <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    <span>Sending link...</span>
+                  </>
+                ) : (
+                  'Send Reset Link'
+                )}
               </Button>
             )}
           </form.Subscribe>
