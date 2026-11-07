@@ -1,13 +1,13 @@
 
 import { AuthViews } from '@/components/auth/AuthViews';
 import { SignInForm } from '@/components/auth/SignInForm';
-import React from 'react';
+import React, { Suspense } from 'react';
 
 const LoginPage = () => {
   return (
-    <AuthViews
-      view='login'
-    />
+    <Suspense fallback={<div className="min-h-75 flex items-center justify-center">Loading...</div>}>
+      <AuthViews view="login" />
+    </Suspense>
   );
 };
 

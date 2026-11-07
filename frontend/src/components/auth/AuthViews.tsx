@@ -6,16 +6,40 @@ import { BsFillCloudsFill } from 'react-icons/bs';
 import { RegisterForm } from './RegisterForm';
 import { ForgotPasswordForm } from './ForgotPasswordForm';
 import VerifyEmailForm from './VerifyEmailForm';
+import { NavigationTab } from '@/types/navigation.types';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 
 
 export interface AuthViewsProps {
   view: 'login' | 'register' | 'forgot-password' | 'verify-email';
+  onNavigate?: (tab: NavigationTab) => void;
+  onLoginSuccess?: () => void;
 }
 
 export const AuthViews: React.FC<AuthViewsProps> = ({
-  view
+  view, onNavigate, onLoginSuccess,
 }) => {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  const handleNavigate = (tab: NavigationTab) => {
+    if (typeof onNavigate === 'function') {
+      onNavigate(tab);
+    } else {
+      router.push(`/${tab}`);
+    }
+  };
+
+  const handleLoginSuccess = () => {
+    if (typeof onLoginSuccess === 'function') {
+      onLoginSuccess()
+    } else {
+      const destination = searchParams.get('redirect') || '/dashboard';
+      router.push(destination);
+      router.refresh();
+    }
+  }
   return (
     <div className="min-h-screen min-h-dvh flex flex-col justify-center items-center py-6 sm:py-10 px-3.5 sm:px-6 w-full max-w-full">
       {/* Decorative ambient background glows */}
@@ -92,7 +116,7 @@ export const AuthViews: React.FC<AuthViewsProps> = ({
 
           {/* Form views */}
           {view === 'login' && (
-            <SignInForm />
+            <SignInForm onLoginSuccess={handleLoginSuccess} onNavigate={handleNavigate} />
           )}
 
           {view === 'register' && (
