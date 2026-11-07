@@ -20,30 +20,7 @@ const registerUser = async (payload: IRegisterUserPayload) => {
   if (!data.user) {
     throw new AppError(status.BAD_REQUEST, "Failed to Register User");
   }
-  const accessToken = tokenUtils.getAccessToken({
-    userId: data.user.id,
-    role: data.user.role,
-    name: data.user.name,
-    email: data.user.email,
-    status: data.user.status,
-    isDeleted: data.user.isDeleted,
-    emailVerified: data.user.emailVerified,
-  })
-  const refreshToken = tokenUtils.getRefreshToken({
-    userId: data.user.id,
-    role: data.user.role,
-    name: data.user.name,
-    email: data.user.email,
-    status: data.user.status,
-    isDeleted: data.user.isDeleted,
-    emailVerified: data.user.emailVerified,
-  })
-
-  return {
-    ...data,
-    accessToken,
-    refreshToken
-  }
+  return data;
 }
 
 const loginUser = async (payload: ILoginUserPayload) => {
@@ -189,7 +166,29 @@ const verifyEmail = async (payload: IVerifyEmailPayload) => {
       }
     });
   }
-  return result;
+  const accessToken = tokenUtils.getAccessToken({
+    userId: result.user.id,
+    role: result.user.role,
+    name: result.user.name,
+    email: result.user.email,
+    status: result.user.status,
+    isDeleted: result.user.isDeleted,
+    emailVerified: result.user.emailVerified,
+  })
+  const refreshToken = tokenUtils.getRefreshToken({
+    userId: result.user.id,
+    role: result.user.role,
+    name: result.user.name,
+    email: result.user.email,
+    status: result.user.status,
+    isDeleted: result.user.isDeleted,
+    emailVerified: result.user.emailVerified,
+  })
+  return {
+    ...result,
+    accessToken,
+    refreshToken,
+  }
 }
 
 const logOutUser = async (sessionToken?: string) => {

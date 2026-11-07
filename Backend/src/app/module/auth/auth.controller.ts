@@ -13,17 +13,12 @@ const registerUser = catchAsync(
   async (req: Request, res: Response) => {
     const payload = req.body;
     const result = await AuthService.registerUser(payload);
-    const { accessToken, refreshToken, token, user } = result;
-    tokenUtils.setAccessTokenCookie(res, accessToken);
-    tokenUtils.setRefreshTokenCookie(res, refreshToken);
-    tokenUtils.setBetterAuthSessionCookie(res, token as string);
+    console.log({ result });
     sendResponse(res, {
       httpStatusCode: status.CREATED,
       success: true,
       message: "User Registered successfully",
-      data: {
-        token, accessToken, refreshToken, user
-      }
+      data: result,
     })
   }
 )
@@ -94,11 +89,17 @@ const verifyEmail = catchAsync(
   async (req: Request, res: Response) => {
     const payload = req.body;
     const result = await AuthService.verifyEmail(payload);
+    const { accessToken, refreshToken, token, user } = result;
+    tokenUtils.setAccessTokenCookie(res, accessToken);
+    tokenUtils.setRefreshTokenCookie(res, refreshToken);
+    tokenUtils.setBetterAuthSessionCookie(res, token as string);
     sendResponse(res, {
       httpStatusCode: status.OK,
       success: true,
       message: "Email Verified successfully",
-      data: result
+      data: {
+        token, accessToken, refreshToken, user
+      }
     })
   }
 )
