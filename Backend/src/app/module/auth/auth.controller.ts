@@ -180,6 +180,19 @@ const resetPassword = catchAsync(
   }
 )
 
+const resendVerificationOtp = catchAsync(
+  async (req: Request, res: Response) => {
+    const { email } = req.body;
+    const result = await AuthService.resendVerificationOtp(email);
+    sendResponse(res, {
+      httpStatusCode: status.OK,
+      success: true,
+      message: "Verification code sent successfully",
+      data: result,
+    });
+  }
+);
+
 const googleLogin = catchAsync(
   async (req: Request, res: Response) => {
     const redirectPath = req.query.redirect || "/dashboard";
@@ -235,6 +248,6 @@ const handleOAuthError = catchAsync(
 
 export const AuthController = {
   registerUser, loginUser, getMe, getNewToken, verifyEmail,
-  logOutUser, changePassword, forgotPassword, resetPassword,
+  logOutUser, changePassword, forgotPassword, resetPassword, resendVerificationOtp,
   googleLogin, googleLoginSuccess, handleOAuthError,
 }

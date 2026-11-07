@@ -16,6 +16,11 @@ router.post("/logout", checkAuth(Role.ADMIN, Role.USER), AuthController.logOutUs
 router.post("/change-password", checkAuth(Role.ADMIN, Role.USER), validateRequest(authValidation.changePasswordZodSchema), AuthController.changePassword);
 router.post("/forgot-password", validateRequest(authValidation.forgotPasswordZodSchema), AuthController.forgotPassword);
 router.post("/reset-password", validateRequest(authValidation.resetPasswordZodSchema), AuthController.resetPassword);
+router.post(
+  "/resend-verification-otp",
+  validateRequest(authValidation.resendVerificationOtpZodSchema),
+  AuthController.resendVerificationOtp
+);
 router.get("/login/google", AuthController.googleLogin);
 router.get("/google/success", AuthController.googleLoginSuccess);
 router.get("/oauth/error", AuthController.handleOAuthError);

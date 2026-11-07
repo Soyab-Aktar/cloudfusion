@@ -316,6 +316,33 @@ const resetPassword = async (payload: IResetPasswordPayload) => {
   })
 }
 
+const resendVerificationOtp = async (email: string) => {
+  const user = await prisma.user.findUnique({
+    where: { email },
+  });
+
+  if (!user || user.isDeleted || user.status === UserStatus.DELETED) {
+    throw new AppError(status.NOT_FOUND, "User not found");
+  }
+
+  if (user.status === UserStatus.BLOCKED) {
+    throw new AppError(status.FORBIDDEN, "User is blocked");
+  }
+
+  if (user.emailVerified) {
+    throw new AppError(status.BAD_REQUEST, "Email is already verified. Please sign in.");
+  }
+
+  await auth.api.sendVerificationOTP({
+    body: {
+      email,
+      type: "email-verification",
+    },
+  });
+
+  return null;
+};
+
 
 const googleLoginSuccess = async (session: Record<string, any>) => {
   const isUserExist = await prisma.user.findUniqueOrThrow({
@@ -360,5 +387,6 @@ export const AuthService = {
   changePassword,
   forgotPassword,
   resetPassword,
+  resendVerificationOtp,
   googleLoginSuccess,
 }
