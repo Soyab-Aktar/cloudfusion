@@ -38,6 +38,12 @@ export async function refreshToken(): Promise<ApiResponse> {
   const res = await axiosInstance.post<ApiResponse>('/auth/refresh-token');
   return res.data;
 }
+export async function resendVerificationOtp(email: string): Promise<ApiResponse> {
+  const res = await axiosInstance.post<ApiResponse>('/auth/resend-verification-otp', {
+    email,
+  });
+  return res.data;
+}
 
 export function initiateGoogleLogin(redirectPath = '/dashboard') {
   const backendBase = process.env.NEXT_PUBLIC_BACKEND_URL;

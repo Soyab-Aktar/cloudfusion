@@ -1,7 +1,7 @@
 
 import { NextResponse, type NextRequest } from 'next/server';
 
-const AUTH_ROUTES = ['/login', '/register', '/forgot-password', '/verify-email'];
+const AUTH_ROUTES = ['/login', '/register', '/forgot-password', '/reset-password'];
 const PROTECTED_ROUTES = ['/dashboard', '/files', '/accounts', '/starred', '/trash'];
 
 export function proxy(request: NextRequest) {
@@ -28,6 +28,10 @@ export function proxy(request: NextRequest) {
   if (hasSession && (isAuthRoute || pathname === '/')) {
     const authRedirect = new URL('/dashboard', request.url);
     return NextResponse.redirect(authRedirect);
+  }
+
+  if (hasSession && pathname === '/verify-email') {
+    return NextResponse.redirect(new URL('/dashboard', request.url));
   }
 
   return NextResponse.next();

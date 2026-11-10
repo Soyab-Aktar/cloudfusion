@@ -1,7 +1,6 @@
 
 import { AuthViews } from '@/components/auth/AuthViews';
-import { SignInForm } from '@/components/auth/SignInForm';
-import React, { Suspense } from 'react';
+import { Suspense } from 'react';
 
 const LoginPage = () => {
   return (

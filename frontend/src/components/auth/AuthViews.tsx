@@ -8,11 +8,12 @@ import { ForgotPasswordForm } from './ForgotPasswordForm';
 import VerifyEmailForm from './VerifyEmailForm';
 import { NavigationTab } from '@/types/navigation.types';
 import { useRouter, useSearchParams } from 'next/navigation';
+import ResetPasswordForm from './ResetPasswordForm';
 
 
 
 export interface AuthViewsProps {
-  view: 'login' | 'register' | 'forgot-password' | 'verify-email';
+  view: 'login' | 'register' | 'forgot-password' | 'verify-email' | 'reset-password';
   onNavigate?: (tab: NavigationTab) => void;
   onLoginSuccess?: () => void;
 }
@@ -94,10 +95,10 @@ export const AuthViews: React.FC<AuthViewsProps> = ({
             {view === 'forgot-password' && (
               <>
                 <h1 className="text-xl sm:text-2xl font-bold text-text-main mt-1 mb-1">
-                  Reset Password
+                  Forgot Password
                 </h1>
                 <p className="text-xs sm:text-sm text-text-muted max-w-[320px]">
-                  Enter your email address and we will send you a password recovery link.
+                  Enter your email address and we will send you a password recovery OTP.
                 </p>
               </>
             )}
@@ -109,6 +110,17 @@ export const AuthViews: React.FC<AuthViewsProps> = ({
                 </h1>
                 <p className="text-xs sm:text-sm text-text-muted max-w-[320px]">
                   We&apos;ve sent a 6-digit verification code to your email address. Enter the code below to verify your email and get started with CloudFusion.
+                </p>
+              </>
+            )}
+
+            {view === 'reset-password' && (
+              <>
+                <h1 className="text-xl sm:text-2xl font-bold text-text-main mt-1 mb-1">
+                  Rest Password
+                </h1>
+                <p className="text-xs sm:text-sm text-text-muted max-w-[320px]">
+                  Enter the verification code sent to your email and your new password.
                 </p>
               </>
             )}
@@ -125,6 +137,10 @@ export const AuthViews: React.FC<AuthViewsProps> = ({
 
           {view === 'forgot-password' && (
             <ForgotPasswordForm />
+          )}
+
+          {view === 'reset-password' && (
+            <ResetPasswordForm />
           )}
 
           {view === 'verify-email' && (

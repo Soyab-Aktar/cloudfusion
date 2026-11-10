@@ -10,12 +10,20 @@ import { FaArrowRight, FaEye, FaEyeSlash } from 'react-icons/fa';
 import { FcGoogle } from 'react-icons/fc';
 import { Button } from '../ui/button';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useAuthContext } from '@/store/AuthContext';
+import { initiateGoogleLogin, registerUser } from '@/services/auth.service';
+import axios from 'axios';
+import { RegisterSchema } from '@/schemas/auth.schema';
 
 
 
 export const RegisterForm = () => {
+  const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
   const [authenticated, setAuthenticated] = useState(false);
+  const [registerError, setRegisterError] = useState('');
+  const { setUser } = useAuthContext();
 
   const getPasswordStrength = (val: string) => {
     if (!val) return 0;
@@ -32,11 +40,30 @@ export const RegisterForm = () => {
       email: '',
       password: '',
     },
-    // validators: {
-    //   onChange: RegisterSchema,
-    // },
-    onSubmit: async () => {
-      console.log("Register Page");
+    onSubmit: async ({ value }) => {
+      setRegisterError('');
+      try {
+        const res = await registerUser({
+          name: value.name,
+          email: value.email,
+          password: value.password,
+        })
+
+        if (res.data?.user) {
+          setUser(res.data?.user);
+        }
+
+        setAuthenticated(true);
+        setTimeout(() => {
+          router.push(`/verify-email?email=${encodeURIComponent(value.email)}&from=register`);
+        }, 500);
+      } catch (err) {
+        const message = axios.isAxiosError(err)
+          ? (err.response?.data as { message?: string } | undefined)?.message ??
+          'Registration failed. Please try again.'
+          : 'Registration failed. Please try again.';
+        setRegisterError(message);
+      }
     },
   });
 
@@ -50,8 +77,23 @@ export const RegisterForm = () => {
       }}
       className="mt-6 flex flex-col gap-4"
     >
+      {registerError && (
+        <div
+          role="alert"
+          className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 p-3 text-xs font-medium text-status-error"
+        >
+          <span className="material-symbols-outlined text-[16px]">error</span>
+          <span>{registerError}</span>
+        </div>
+      )}
       {/* Full Name */}
-      <form.Field name="name">
+      <form.Field
+        name="name"
+        validators={{
+          onChange: RegisterSchema.shape.name,
+          onBlur: RegisterSchema.shape.name,
+        }}
+      >
         {(field) => {
           const hasError =
             form.state.submissionAttempts > 0 &&
@@ -81,7 +123,13 @@ export const RegisterForm = () => {
       </form.Field>
 
       {/* Email */}
-      <form.Field name="email">
+      <form.Field
+        name="email"
+        validators={{
+          onChange: RegisterSchema.shape.email,
+          onBlur: RegisterSchema.shape.email,
+        }}
+      >
         {(field) => {
           const hasError =
             form.state.submissionAttempts > 0 &&
@@ -112,7 +160,13 @@ export const RegisterForm = () => {
       </form.Field>
 
       {/* Password */}
-      <form.Field name="password">
+      <form.Field
+        name="password"
+        validators={{
+          onChange: RegisterSchema.shape.password,
+          onBlur: RegisterSchema.shape.password,
+        }}
+      >
         {(field) => {
           const hasError =
             form.state.submissionAttempts > 0 &&
@@ -249,6 +303,7 @@ export const RegisterForm = () => {
       <Button
         type="button"
         variant="outline"
+        onClick={() => initiateGoogleLogin('/dashboard')}
         className="w-full h-11 bg-app-bg hover:bg-slate-200 text-text-main text-xs sm:text-sm font-semibold flex items-center justify-center gap-3 border-border-subtle shadow-xs cursor-pointer"
       >
         <FcGoogle />

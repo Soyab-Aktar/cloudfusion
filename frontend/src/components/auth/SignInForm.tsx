@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useForm } from '@tanstack/react-form-nextjs';
 import Link from 'next/link';
 import axios from 'axios';
@@ -19,6 +19,8 @@ import { initiateGoogleLogin, loginUser } from '@/services/auth.service';
 import { NavigationTab } from '@/types/navigation.types';
 import { useAuthContext } from '@/store/AuthContext';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { BiError } from 'react-icons/bi';
+import { RiErrorWarningLine } from 'react-icons/ri';
 
 export interface SignInFormProps {
   onLoginSuccess: () => void;
@@ -35,6 +37,14 @@ export const SignInForm: React.FC<SignInFormProps> = ({
   const [isSocialSubmitting, setIsSocialSubmitting] = useState(false);
   const [authenticated, setAuthenticated] = useState(false);
   const [loginError, setLoginError] = useState('');
+  const [unverifiedEmail, setUnverifiedEmail] = useState<string | null>(null);
+
+  const isVerifiedSuccess = searchParams.get('verified') === 'true';
+
+  useEffect(() => {
+    setLoginError('');
+    setUnverifiedEmail(null);
+  }, [])
 
 
   const form = useForm({
@@ -45,6 +55,7 @@ export const SignInForm: React.FC<SignInFormProps> = ({
 
     onSubmit: async ({ value }) => {
       setLoginError('');
+      setUnverifiedEmail(null);
 
       try {
         const res = await loginUser({
@@ -68,7 +79,15 @@ export const SignInForm: React.FC<SignInFormProps> = ({
           )?.message ?? 'Login failed. Please try again.'
           : 'Login failed. Please try again.';
 
-        setLoginError(message);
+        const isUnverified = message.toLowerCase().includes('email not verified');
+        if (isUnverified) {
+          setLoginError('Your email is not verified yet. Please verify your email to continue.');
+          setUnverifiedEmail(value.email);
+        } else {
+          setLoginError(message);
+          setUnverifiedEmail(null);
+        }
+
       }
     },
   });
@@ -88,18 +107,61 @@ export const SignInForm: React.FC<SignInFormProps> = ({
       }}
       className="mt-6 flex flex-col gap-4"
     >
-      {/* Login error */}
+
+
+      {/* Login Error / Unverified Alert */}
       {loginError && (
         <div
           role="alert"
-          className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 p-3 text-xs font-medium text-status-error"
+          className={`flex items-start gap-2.5 rounded-xl border p-3.5 ${unverifiedEmail
+            ? 'border-amber-200 bg-amber-50/80'
+            : 'border-red-200 bg-red-50/80'
+            }`}
         >
-          <span className="material-symbols-outlined text-[16px]">
-            error
-          </span>
-          <span>{loginError}</span>
+          {unverifiedEmail ? (
+            <RiErrorWarningLine className="mt-0.5 h-[18px] w-[18px] shrink-0 text-amber-700" />
+          ) : (
+            <BiError className="mt-0.5 h-[18px] w-[18px] shrink-0 text-red-600" />
+          )}
+
+          <div className="min-w-0 flex-1">
+            <p
+              className={`text-[13px] font-medium leading-5 ${unverifiedEmail ? 'text-amber-950' : 'text-red-900'
+                }`}
+            >
+              {loginError}
+            </p>
+
+            {unverifiedEmail && (
+              <button
+                type="button"
+                onClick={() =>
+                  router.push(
+                    `/verify-email?email=${encodeURIComponent(unverifiedEmail)}&from=login`
+                  )
+                }
+                className="mt-1 inline-flex items-center gap-1 text-xs font-semibold text-amber-800 underline underline-offset-4 decoration-amber-400 transition-colors hover:text-amber-950 cursor-pointer"
+              >
+                Verify your email
+                <span aria-hidden="true">→</span>
+              </button>
+            )}
+          </div>
         </div>
       )}
+      {isVerifiedSuccess && !loginError && (
+        <div
+          role="status"
+          className="flex items-center gap-2.5 rounded-xl border border-emerald-200 bg-emerald-50/80 p-3.5 text-emerald-900"
+        >
+          <FaCheck className="h-4 w-4 shrink-0 text-emerald-600" />
+          <span className="text-[13px] font-medium leading-5">
+            Email verified successfully! You can now sign in with your password.
+          </span>
+        </div>
+      )}
+
+
 
       {/* Email */}
       <form.Field
