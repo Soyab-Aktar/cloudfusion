@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useEffect, useState } from 'react';
@@ -19,8 +18,7 @@ import { initiateGoogleLogin, loginUser } from '@/services/auth.service';
 import { NavigationTab } from '@/types/navigation.types';
 import { useAuthContext } from '@/store/AuthContext';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { BiError } from 'react-icons/bi';
-import { RiErrorWarningLine } from 'react-icons/ri';
+import { toast } from 'sonner';
 
 export interface SignInFormProps {
   onLoginSuccess: () => void;
@@ -33,19 +31,20 @@ export const SignInForm: React.FC<SignInFormProps> = ({
   const { setUser } = useAuthContext();
   const router = useRouter();
   const searchParams = useSearchParams();
+
   const [showPassword, setShowPassword] = useState(false);
   const [isSocialSubmitting, setIsSocialSubmitting] = useState(false);
   const [authenticated, setAuthenticated] = useState(false);
-  const [loginError, setLoginError] = useState('');
-  const [unverifiedEmail, setUnverifiedEmail] = useState<string | null>(null);
 
   const isVerifiedSuccess = searchParams.get('verified') === 'true';
 
   useEffect(() => {
-    setLoginError('');
-    setUnverifiedEmail(null);
-  }, [])
-
+    if (isVerifiedSuccess) {
+      toast.success("Email verified successfully!", {
+        description: "You can now sign in with your password.",
+      });
+    }
+  }, [isVerifiedSuccess]);
 
   const form = useForm({
     defaultValues: {
@@ -54,9 +53,6 @@ export const SignInForm: React.FC<SignInFormProps> = ({
     } as SignInValues,
 
     onSubmit: async ({ value }) => {
-      setLoginError('');
-      setUnverifiedEmail(null);
-
       try {
         const res = await loginUser({
           email: value.email,
@@ -69,7 +65,7 @@ export const SignInForm: React.FC<SignInFormProps> = ({
         setAuthenticated(true);
         setTimeout(() => {
           onLoginSuccess();
-        }, 500)
+        }, 500);
       } catch (err: unknown) {
         const message = axios.isAxiosError(err)
           ? (
@@ -80,14 +76,23 @@ export const SignInForm: React.FC<SignInFormProps> = ({
           : 'Login failed. Please try again.';
 
         const isUnverified = message.toLowerCase().includes('email not verified');
-        if (isUnverified) {
-          setLoginError('Your email is not verified yet. Please verify your email to continue.');
-          setUnverifiedEmail(value.email);
-        } else {
-          setLoginError(message);
-          setUnverifiedEmail(null);
-        }
 
+        if (isUnverified) {
+          toast.warning("Email not verified", {
+            description: "Please verify your email to continue.",
+            action: {
+              label: "Verify",
+              onClick: () =>
+                router.push(
+                  `/verify-email?email=${encodeURIComponent(value.email)}&from=login`
+                ),
+            },
+          });
+        } else {
+          toast.error("Sign In Failed", {
+            description: message,
+          });
+        }
       }
     },
   });
@@ -95,7 +100,7 @@ export const SignInForm: React.FC<SignInFormProps> = ({
   const handleGoogleLogin = () => {
     setIsSocialSubmitting(true);
     initiateGoogleLogin('/dashboard');
-  }
+  };
 
   return (
     <form
@@ -107,62 +112,6 @@ export const SignInForm: React.FC<SignInFormProps> = ({
       }}
       className="mt-6 flex flex-col gap-4"
     >
-
-
-      {/* Login Error / Unverified Alert */}
-      {loginError && (
-        <div
-          role="alert"
-          className={`flex items-start gap-2.5 rounded-xl border p-3.5 ${unverifiedEmail
-            ? 'border-amber-200 bg-amber-50/80'
-            : 'border-red-200 bg-red-50/80'
-            }`}
-        >
-          {unverifiedEmail ? (
-            <RiErrorWarningLine className="mt-0.5 h-[18px] w-[18px] shrink-0 text-amber-700" />
-          ) : (
-            <BiError className="mt-0.5 h-[18px] w-[18px] shrink-0 text-red-600" />
-          )}
-
-          <div className="min-w-0 flex-1">
-            <p
-              className={`text-[13px] font-medium leading-5 ${unverifiedEmail ? 'text-amber-950' : 'text-red-900'
-                }`}
-            >
-              {loginError}
-            </p>
-
-            {unverifiedEmail && (
-              <button
-                type="button"
-                onClick={() =>
-                  router.push(
-                    `/verify-email?email=${encodeURIComponent(unverifiedEmail)}&from=login`
-                  )
-                }
-                className="mt-1 inline-flex items-center gap-1 text-xs font-semibold text-amber-800 underline underline-offset-4 decoration-amber-400 transition-colors hover:text-amber-950 cursor-pointer"
-              >
-                Verify your email
-                <span aria-hidden="true">→</span>
-              </button>
-            )}
-          </div>
-        </div>
-      )}
-      {isVerifiedSuccess && !loginError && (
-        <div
-          role="status"
-          className="flex items-center gap-2.5 rounded-xl border border-emerald-200 bg-emerald-50/80 p-3.5 text-emerald-900"
-        >
-          <FaCheck className="h-4 w-4 shrink-0 text-emerald-600" />
-          <span className="text-[13px] font-medium leading-5">
-            Email verified successfully! You can now sign in with your password.
-          </span>
-        </div>
-      )}
-
-
-
       {/* Email */}
       <form.Field
         name="email"
@@ -198,10 +147,7 @@ export const SignInForm: React.FC<SignInFormProps> = ({
                   inputMode="email"
                   value={field.state.value}
                   onBlur={field.handleBlur}
-                  onChange={(e) => {
-                    setLoginError('');
-                    field.handleChange(e.target.value);
-                  }}
+                  onChange={(e) => field.handleChange(e.target.value)}
                   aria-invalid={hasError}
                   aria-describedby={
                     hasError ? 'login-email-error' : undefined
@@ -260,10 +206,7 @@ export const SignInForm: React.FC<SignInFormProps> = ({
                   autoComplete="current-password"
                   value={field.state.value}
                   onBlur={field.handleBlur}
-                  onChange={(e) => {
-                    setLoginError('');
-                    field.handleChange(e.target.value);
-                  }}
+                  onChange={(e) => field.handleChange(e.target.value)}
                   aria-invalid={hasError}
                   aria-describedby={
                     hasError ? 'login-password-error' : undefined

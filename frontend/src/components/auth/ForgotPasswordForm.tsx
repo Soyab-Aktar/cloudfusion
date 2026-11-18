@@ -13,6 +13,7 @@ import { Input } from '@/components/ui/input';
 import { FormField } from '@/components/ui/form-field';
 import { ForgotPasswordSchema, ForgotPasswordValues } from '@/schemas/auth.schema';
 import { forgotPassword } from '@/services/auth.service';
+import { toast } from 'sonner';
 
 export const ForgotPasswordForm = () => {
   const [forgotPasswordError, setForgotPasswordError] = useState('');
@@ -31,6 +32,9 @@ export const ForgotPasswordForm = () => {
         });
 
         if (res.success) {
+          toast.success("Recovery code sent", {
+            description: "Please check your inbox for your 6-digit OTP code.",
+          });
           router.push(`/reset-password?email=${encodeURIComponent(value.email)}`);
         }
       } catch (err: unknown) {
@@ -39,6 +43,9 @@ export const ForgotPasswordForm = () => {
           'Failed to send password recovery OTP. Please try again.'
           : 'Failed to send password recovery OTP. Please try again.';
         setForgotPasswordError(message);
+        toast.error("Request Failed", {
+          description: message,
+        });
       }
     },
   });
@@ -81,7 +88,7 @@ export const ForgotPasswordForm = () => {
             <FormField
               label="Email address"
               htmlFor="forgot-email"
-              error={hasError ? String(field.state.meta.errors[0]) : undefined}
+              error={hasError ? field.state.meta.errors[0]?.message : undefined}
             >
               <div className="relative">
                 <MdOutlineEmail className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted text-[20px] pointer-events-none" />

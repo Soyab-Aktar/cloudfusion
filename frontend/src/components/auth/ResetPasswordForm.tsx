@@ -21,6 +21,7 @@ import {
 } from '@/components/ui/input-otp';
 import { ResetPasswordSchema, ResetPasswordValues } from '@/schemas/auth.schema';
 import { resetPassword, forgotPassword } from '@/services/auth.service';
+import { toast } from 'sonner';
 
 export const ResetPasswordForm = () => {
   const router = useRouter();
@@ -80,7 +81,9 @@ export const ResetPasswordForm = () => {
       await forgotPassword({ email });
       // 90 seconds cooldown (1 min 30 sec)
       setCountdown(90);
-      setResendMessage('A new 6-digit recovery code has been sent to your email.');
+      toast.success("Code resent", {
+        description: "A new recovery code has been sent to your email.",
+      });
     } catch (err: unknown) {
       const message = axios.isAxiosError(err)
         ? (err.response?.data as { message?: string } | undefined)?.message ??
@@ -115,6 +118,9 @@ export const ResetPasswordForm = () => {
         });
 
         setResetSuccess(true);
+        toast.success("Password reset successfully!", {
+          description: "You can now log in with your new password.",
+        });
         setTimeout(() => {
           router.push('/login');
         }, 1500);
@@ -124,6 +130,9 @@ export const ResetPasswordForm = () => {
           'Invalid or expired verification code. Please try again.'
           : 'Failed to reset password. Please try again.';
         setResetError(message);
+        toast.error("Password reset failed", {
+          description: message,
+        });
       }
     },
   });
@@ -299,20 +308,20 @@ export const ResetPasswordForm = () => {
                         <div className="flex gap-1.5 mt-1">
                           <div
                             className={`h-1 flex-1 rounded-full transition-colors ${score >= 1
-                                ? score === 1
-                                  ? 'bg-status-error'
-                                  : score === 2
-                                    ? 'bg-status-warning'
-                                    : 'bg-status-success'
-                                : 'bg-slate-200'
+                              ? score === 1
+                                ? 'bg-status-error'
+                                : score === 2
+                                  ? 'bg-status-warning'
+                                  : 'bg-status-success'
+                              : 'bg-slate-200'
                               }`}
                           />
                           <div
                             className={`h-1 flex-1 rounded-full transition-colors ${score >= 2
-                                ? score === 2
-                                  ? 'bg-status-warning'
-                                  : 'bg-status-success'
-                                : 'bg-slate-200'
+                              ? score === 2
+                                ? 'bg-status-warning'
+                                : 'bg-status-success'
+                              : 'bg-slate-200'
                               }`}
                           />
                           <div
@@ -368,8 +377,8 @@ export const ResetPasswordForm = () => {
               disabled={countdown > 0 || isResending || !email}
               onClick={handleResendOtp}
               className={`ml-1 font-semibold transition-colors ${countdown > 0 || isResending || !email
-                  ? 'text-text-muted/60 cursor-not-allowed'
-                  : 'text-primary hover:text-primary-hover cursor-pointer underline'
+                ? 'text-text-muted/60 cursor-not-allowed'
+                : 'text-primary hover:text-primary-hover cursor-pointer underline'
                 }`}
             >
               {isResending

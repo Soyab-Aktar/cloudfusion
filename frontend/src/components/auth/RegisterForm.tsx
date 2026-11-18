@@ -15,6 +15,7 @@ import { useAuthContext } from '@/store/AuthContext';
 import { initiateGoogleLogin, registerUser } from '@/services/auth.service';
 import axios from 'axios';
 import { RegisterSchema } from '@/schemas/auth.schema';
+import { toast } from 'sonner';
 
 
 
@@ -54,6 +55,9 @@ export const RegisterForm = () => {
         }
 
         setAuthenticated(true);
+        toast.success("Account created successfully!", {
+          description: "We sent a 6-digit verification code to your email.",
+        });
         setTimeout(() => {
           router.push(`/verify-email?email=${encodeURIComponent(value.email)}&from=register`);
         }, 500);
@@ -63,6 +67,9 @@ export const RegisterForm = () => {
           'Registration failed. Please try again.'
           : 'Registration failed. Please try again.';
         setRegisterError(message);
+        toast.error("Registration Failed", {
+          description: message,
+        });
       }
     },
   });

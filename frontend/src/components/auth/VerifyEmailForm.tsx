@@ -16,6 +16,7 @@ import { VerifyEmailSchema, VerifyEmailValues } from '@/schemas/auth.schema';
 import { resendVerificationOtp, verifyEmail } from '@/services/auth.service';
 import axios from 'axios';
 import { BiError } from 'react-icons/bi';
+import { toast } from 'sonner';
 
 export const VerifyEmailForm = () => {
   const [isVerified, setIsVerified] = useState(false);
@@ -62,12 +63,15 @@ export const VerifyEmailForm = () => {
       await resendVerificationOtp(email);
       // Start 1 minute 30 seconds cooldown
       setCountdown(90);
-      setResendMessage('A new 6-digit code has been sent to your email.');
+      toast.success("Code resent", {
+        description: "A new 6-digit code has been sent to your email.",
+      });
     } catch (err: unknown) {
       const message = axios.isAxiosError(err)
         ? (err.response?.data as { message?: string } | undefined)?.message ??
         'Failed to resend code. Please try again.'
         : 'Failed to resend code. Please try again.';
+      toast.error("Failed to resend code", { description: message });
       setVerifyError(message);
     } finally {
       setIsResending(false);
@@ -96,6 +100,9 @@ export const VerifyEmailForm = () => {
           otp: value.otp
         })
         setIsVerified(true);
+        toast.success("Email verified!", {
+          description: "Redirecting to your dashboard...",
+        });
         setTimeout(() => {
           if (hasSession) {
             router.push('/dashboard');
@@ -107,6 +114,7 @@ export const VerifyEmailForm = () => {
           ? (err.response?.data as { message?: string } | undefined)?.message ??
           'Invalid or expired verification code.'
           : 'Failed to verify email. Please try again.';
+        toast.error("Verification failed", { description: message });
         setVerifyError(message);
       }
     },
@@ -272,8 +280,8 @@ export const VerifyEmailForm = () => {
               disabled={countdown > 0 || isResending}
               onClick={handleResendOtp}
               className={`ml-1 font-semibold transition-colors ${countdown > 0 || isResending
-                  ? 'text-text-muted/60 cursor-not-allowed'
-                  : 'text-primary hover:text-primary-hover cursor-pointer underline'
+                ? 'text-text-muted/60 cursor-not-allowed'
+                : 'text-primary hover:text-primary-hover cursor-pointer underline'
                 }`}
             >
               {isResending
