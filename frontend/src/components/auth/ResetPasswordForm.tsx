@@ -37,11 +37,6 @@ export const ResetPasswordForm = () => {
   const [isResending, setIsResending] = useState(false);
   const [resendMessage, setResendMessage] = useState('');
 
-  useEffect(() => {
-    setResetSuccess(false);
-    setResetError('');
-  }, []);
-
   // Countdown timer logic
   useEffect(() => {
     if (countdown <= 0) return;

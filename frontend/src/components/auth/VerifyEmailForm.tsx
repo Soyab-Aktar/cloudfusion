@@ -30,11 +30,6 @@ export const VerifyEmailForm = () => {
   const from = searchParams.get('from');
 
   useEffect(() => {
-    setIsVerified(false);
-    setVerifyError('');
-  }, [])
-
-  useEffect(() => {
     if (countdown <= 0) return;
     const timer = setInterval(() => {
       setCountdown((prev) => {
