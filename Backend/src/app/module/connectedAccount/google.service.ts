@@ -16,7 +16,7 @@ export const createOAuthClient = () => {
 }
 
 // 1. Generate Google OAuth Login URL
-const getGoogleAuthUrl = (userId: string) => {
+const getGoogleAuthUrl = (state: string) => {
   const client = createOAuthClient();
   return client.generateAuthUrl({
     access_type: "offline",
@@ -26,7 +26,7 @@ const getGoogleAuthUrl = (userId: string) => {
       "https://www.googleapis.com/auth/userinfo.email",
       "https://www.googleapis.com/auth/userinfo.profile",
     ],
-    state: userId,
+    state,
   })
 }
 

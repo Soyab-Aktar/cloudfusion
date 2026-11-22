@@ -72,21 +72,40 @@ export const checkAuth = (...authRoles: Role[]) => async (req: Request, res: Res
     if (!req.user && accessToken) {
       const verifiedToken = jwtUtils.verifyToken(accessToken, envVars.ACCESS_TOKEN_SECRET);
 
-      if (!verifiedToken.success) {
+      if (!verifiedToken.success || !verifiedToken.data) {
         throw new AppError(status.UNAUTHORIZED, 'Unauthorized access! Invalid access token.');
       }
 
-      if (authRoles.length > 0 && !authRoles.includes(verifiedToken.data!.role as Role)) {
+      const user = await prisma.user.findUnique({
+        where: { id: verifiedToken.data.userId },
+      });
+
+      if (!user) {
+        throw new AppError(status.UNAUTHORIZED, 'Unauthorized access! User does not exist.');
+      }
+
+      if (user.status === UserStatus.BLOCKED || user.status === UserStatus.DELETED) {
+        throw new AppError(status.UNAUTHORIZED, 'Unauthorized access! User is not active.');
+      }
+
+      if (user.isDeleted) {
+        throw new AppError(status.UNAUTHORIZED, 'Unauthorized access! User is deleted.');
+      }
+
+      if (authRoles.length > 0 && !authRoles.includes(user.role)) {
         throw new AppError(status.FORBIDDEN, 'Forbidden access! You do not have permission to access this resource.');
       }
 
-      if (verifiedToken.data) {
-        req.user = {
-          userId: verifiedToken.data.userId,
-          role: verifiedToken.data.role as Role,
-          email: verifiedToken.data.email,
-        };
-      }
+      req.user = {
+        userId: user.id,
+        role: user.role,
+        email: user.email,
+      };
+    }
+
+    // Strict final guard: ensure req.user was populated
+    if (!req.user) {
+      throw new AppError(status.UNAUTHORIZED, 'Unauthorized access! Invalid or expired session.');
     }
 
     next();
