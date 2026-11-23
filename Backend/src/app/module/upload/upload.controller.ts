@@ -22,7 +22,7 @@ class ByteCounter extends Transform {
 
 // Parses multipart/form-data — resolves immediately when file stream is ready
 const parseUploadStream = (
-  req: Request
+  req: Request, res: Response
 ): Promise<{
   stream: PassThrough;
   fileName: string;
@@ -54,8 +54,9 @@ const parseUploadStream = (
       fileHandled = true;
 
       const counter = new ByteCounter();
-      // 64 KB streaming buffer keeps RAM flat under large uploads
       const passThrough = new PassThrough({ highWaterMark: 64 * 1024 });
+
+      passThrough.on("error", () => { });
 
       let rejected = false;
       const rejectOnce = (err: unknown) => {
@@ -81,14 +82,13 @@ const parseUploadStream = (
       });
 
       req.on("close", () => {
-        if (!passThrough.writableEnded) {
+        if (!passThrough.writableFinished && !passThrough.writableEnded) {
           passThrough.destroy();
         }
       });
 
       file.pipe(counter).pipe(passThrough);
 
-      // Resolve immediately so consumer starts streaming right away
       resolve({
         stream: passThrough,
         fileName: info.filename,
@@ -112,7 +112,7 @@ const parseUploadStream = (
 const uploadFile = catchAsync(async (req: Request, res: Response) => {
   const userId = req.user!.userId;
 
-  const { stream, fileName, mimeType, fields, counter } = await parseUploadStream(req);
+  const { stream, fileName, mimeType, fields, counter } = await parseUploadStream(req, res);
 
   // Allow query parameter fallback so client field ordering never drops metadata
   const query = req.query as Record<string, string | undefined>;

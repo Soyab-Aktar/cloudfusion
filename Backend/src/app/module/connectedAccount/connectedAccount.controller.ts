@@ -11,6 +11,12 @@ import { cookieUtils } from "../../utils/cookie";
 import { jwtUtils } from "../../utils/jwt";
 
 const OAUTH_STATE_COOKIE = "google_oauth_state";
+const OAUTH_COOKIE_OPTIONS = {
+  httpOnly: true,
+  secure: envVars.NODE_ENV === "production",
+  sameSite: "lax" as const,
+  path: "/",
+};
 
 const connectGoogleAccount = catchAsync(async (req: Request, res: Response) => {
   const userId = req.user?.userId;
@@ -20,9 +26,7 @@ const connectGoogleAccount = catchAsync(async (req: Request, res: Response) => {
 
   const nonce = crypto.randomBytes(16).toString("hex");
   cookieUtils.setCookie(res, OAUTH_STATE_COOKIE, nonce, {
-    httpOnly: true,
-    secure: envVars.NODE_ENV === "production",
-    sameSite: "lax",
+    ...OAUTH_COOKIE_OPTIONS,
     maxAge: 10 * 60 * 1000,
   });
   const stateToken = jwtUtils.createToken({ userId, nonce }, envVars.ACCESS_TOKEN_SECRET, {
@@ -44,11 +48,7 @@ const googleOAuthCallback = catchAsync(async (req: Request, res: Response) => {
   const error = req.query.error as string;
 
   const clearStateCookie = () => {
-    cookieUtils.clearCookie(res, OAUTH_STATE_COOKIE, {
-      httpOnly: true,
-      secure: envVars.NODE_ENV === "production",
-      sameSite: "lax",
-    });
+    cookieUtils.clearCookie(res, OAUTH_STATE_COOKIE, OAUTH_COOKIE_OPTIONS);
   };
   if (error) {
     clearStateCookie();

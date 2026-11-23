@@ -12,9 +12,10 @@ export const checkAuth = (...authRoles: Role[]) => async (req: Request, res: Res
     const sessionToken = cookieUtils.getCookie(req, "better-auth.session_token");
 
     if (sessionToken) {
+      const cleanSessionToken = sessionToken.split(".")[0];
       const sessionExists = await prisma.session.findFirst({
         where: {
-          token: sessionToken,
+          token: cleanSessionToken,
           expiresAt: {
             gt: new Date(),
           }
