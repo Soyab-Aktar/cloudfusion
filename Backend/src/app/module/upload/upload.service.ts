@@ -1,6 +1,6 @@
 import status from "http-status";
 import AppError from "../../errorHelpers/AppError";
-import { prisma } from "../../lib/prisma"
+import { prisma } from "../../lib/prisma";
 import { IUploadFileInput } from "./upload.interface";
 import { StorageAdapterFactory } from "../storage/storageAdapter.factory";
 import { FileService } from "../file/file.service";
@@ -10,7 +10,7 @@ const pickBestAccount = async (userId: string): Promise<string> => {
     where: {
       userId,
       status: "CONNECTED",
-    }
+    },
   });
 
   if (accounts.length === 0) {
@@ -24,24 +24,26 @@ const pickBestAccount = async (userId: string): Promise<string> => {
   })[0];
 
   return best.id;
-}
+};
 
 const uploadFile = async (input: IUploadFileInput) => {
   const {
     userId,
     fileName,
     mimeType,
-    size,
+    size = 0,
     stream,
     folderId,
     parentProviderFolderId,
     policy,
     targetAccountId,
+    getByteCount,
+    onStreamStart,
   } = input;
 
   let resolvedAccountId: string;
 
-  if (policy === 'manual') {
+  if (policy === "manual") {
     if (!targetAccountId) {
       throw new AppError(status.BAD_REQUEST, "targetAccountId is required for manual policy");
     }
@@ -49,7 +51,7 @@ const uploadFile = async (input: IUploadFileInput) => {
       where: {
         id: targetAccountId,
         userId,
-      }
+      },
     });
     if (!account) {
       throw new AppError(status.NOT_FOUND, "Connected account not found");
@@ -68,11 +70,13 @@ const uploadFile = async (input: IUploadFileInput) => {
       targetAccountId: resolvedAccountId,
       folderId: folderId ?? null,
       status: "IN_PROGRESS",
-    }
+    },
   });
 
   try {
     const adapter = await StorageAdapterFactory.getAdapter(userId, resolvedAccountId);
+
+    onStreamStart?.();
 
     const uploaded = await adapter.uploadFile({
       name: fileName,
@@ -80,11 +84,13 @@ const uploadFile = async (input: IUploadFileInput) => {
       stream,
       size: BigInt(size),
       parentProviderFolderId,
-    })
+    });
+
+    const finalSize = uploaded.size ? Number(uploaded.size) : (getByteCount ? getByteCount() : size);
 
     const fileRecord = await FileService.createFileRecord({
       name: uploaded.name,
-      size: uploaded.size ? Number(uploaded.size) : size,
+      size: finalSize,
       mimeType: uploaded.mimeType,
       extension: fileName.includes(".") ? fileName.split(".").pop() : undefined,
       userId,
@@ -98,7 +104,10 @@ const uploadFile = async (input: IUploadFileInput) => {
 
     await prisma.uploadSession.update({
       where: { id: session.id },
-      data: { status: "COMPLETED" },
+      data: {
+        status: "COMPLETED",
+        size: BigInt(finalSize),
+      },
     });
 
     return fileRecord;
@@ -109,9 +118,7 @@ const uploadFile = async (input: IUploadFileInput) => {
     });
     throw error;
   }
-
 };
-
 
 export const UploadService = {
   uploadFile,

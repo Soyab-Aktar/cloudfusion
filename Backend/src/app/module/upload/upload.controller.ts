@@ -9,7 +9,7 @@ import status from "http-status";
 
 const FILE_SIZE_LIMIT_BYTES = 500 * 1024 * 1024; // 500 MB
 
-// Counts actual file bytes flowing through the pipeline (Content-Length is inaccurate)
+// Counts actual file bytes flowing through the pipeline
 class ByteCounter extends Transform {
   public byteCount = 0;
 
@@ -20,7 +20,7 @@ class ByteCounter extends Transform {
   }
 }
 
-// Parses multipart/form-data — resolves only after ALL parts received
+// Parses multipart/form-data — resolves immediately when file stream is ready
 const parseUploadStream = (
   req: Request
 ): Promise<{
@@ -34,77 +34,74 @@ const parseUploadStream = (
     const bb = busboy({
       headers: req.headers,
       limits: {
-        fileSize: FILE_SIZE_LIMIT_BYTES, // reject files > 500MB
-        files: 1,                        // single file per request
+        fileSize: FILE_SIZE_LIMIT_BYTES,
+        files: 1,
       },
     });
 
     const fields: Record<string, string> = {};
-    let fileReceived = false;
-    let pending: {
-      stream: PassThrough;
-      fileName: string;
-      mimeType: string;
-      counter: ByteCounter;
-    } | null = null;
+    let fileHandled = false;
 
     bb.on("field", (name, value) => {
       fields[name] = value;
     });
 
     bb.on("file", (_fieldName, file, info) => {
-      fileReceived = true;
+      if (fileHandled) {
+        file.resume();
+        return;
+      }
+      fileHandled = true;
 
       const counter = new ByteCounter();
-      const passThrough = new PassThrough({ highWaterMark: 10 * 1024 * 1024 }); // 10MB buffer
+      // 64 KB streaming buffer keeps RAM flat under large uploads
+      const passThrough = new PassThrough({ highWaterMark: 64 * 1024 });
 
-      passThrough.on("error", () => { });
-
-      // Guard: ensure we only call reject() once
       let rejected = false;
       const rejectOnce = (err: unknown) => {
-        if (!rejected) { rejected = true; reject(err); }
+        if (!rejected) {
+          rejected = true;
+          reject(err);
+        }
       };
 
-      // Propagate file stream errors to passThrough
       file.on("error", (err) => {
         passThrough.destroy(err);
         rejectOnce(err);
       });
 
-      // File size limit hit — return 413
       file.on("limit", () => {
         const err = new AppError(
           status.REQUEST_ENTITY_TOO_LARGE,
           `File exceeds the maximum allowed size of ${FILE_SIZE_LIMIT_BYTES / (1024 * 1024)}MB`
         );
-        file.resume(); // drain so busboy doesn't hang
+        file.resume();
         passThrough.destroy(err);
         rejectOnce(err);
       });
 
-      // Client disconnected — destroy stream silently (no error arg)
-      // Passing an error arg emits 'error' even after our listener is attached,
-      // which can still propagate up through pipe chains and crash the server.
       req.on("close", () => {
         if (!passThrough.writableEnded) {
-          passThrough.destroy(); // silent destroy — no error event emitted
+          passThrough.destroy();
         }
       });
 
-      // file → count bytes → passThrough → Google Drive
       file.pipe(counter).pipe(passThrough);
 
-      pending = { stream: passThrough, fileName: info.filename, mimeType: info.mimeType, counter };
+      // Resolve immediately so consumer starts streaming right away
+      resolve({
+        stream: passThrough,
+        fileName: info.filename,
+        mimeType: info.mimeType,
+        fields,
+        counter,
+      });
     });
 
-    // Resolve after ALL parts received — fields guaranteed complete
     bb.on("finish", () => {
-      if (!fileReceived || !pending) {
+      if (!fileHandled) {
         reject(new AppError(status.BAD_REQUEST, "No file was included in the request"));
-        return;
       }
-      resolve({ ...pending, fields });
     });
 
     bb.on("error", reject);
@@ -117,24 +114,29 @@ const uploadFile = catchAsync(async (req: Request, res: Response) => {
 
   const { stream, fileName, mimeType, fields, counter } = await parseUploadStream(req);
 
-  const policy = fields.policy === "manual" ? "manual" : "auto";
+  // Allow query parameter fallback so client field ordering never drops metadata
+  const query = req.query as Record<string, string | undefined>;
+  const policy = (fields.policy || query.policy) === "manual" ? "manual" : "auto";
+  const folderId = fields.folderId || query.folderId;
+  const parentProviderFolderId = fields.parentProviderFolderId || query.parentProviderFolderId;
+  const targetAccountId = fields.targetAccountId || query.targetAccountId;
 
-  // Track if service started consuming stream — drain on early failure to prevent hang
   let streamConsumed = false;
 
   try {
-    streamConsumed = true;
-
     const result = await UploadService.uploadFile({
       userId,
       fileName,
       mimeType,
-      size: counter.byteCount,
       stream,
-      folderId: fields.folderId,
-      parentProviderFolderId: fields.parentProviderFolderId,
+      folderId,
+      parentProviderFolderId,
       policy,
-      targetAccountId: fields.targetAccountId,
+      targetAccountId,
+      getByteCount: () => counter.byteCount,
+      onStreamStart: () => {
+        streamConsumed = true;
+      },
     });
 
     sendResponse(res, {
@@ -144,7 +146,9 @@ const uploadFile = catchAsync(async (req: Request, res: Response) => {
       data: result,
     });
   } catch (err) {
-    if (!streamConsumed) stream.resume(); // drain unconsumed stream
+    if (!streamConsumed) {
+      stream.resume(); // drain stream to avoid unhandled backpressure / hanging socket
+    }
     throw err;
   }
 });

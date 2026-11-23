@@ -21,7 +21,6 @@ const app: Application = express();
 app.set("query parser", (str: string) => qs.parse(str));
 app.set("view engine", "ejs");
 app.set("views", path.resolve(process.cwd(), `src/app/template`));
-app.use("/api/auth", toNodeHandler(auth));
 
 app.use(
   cors({
@@ -31,6 +30,7 @@ app.use(
     allowedHeaders: ["Content-Type", "Content-Disposition", "Authorization"]
   })
 )
+app.use("/api/auth", toNodeHandler(auth));
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(cookieParser());

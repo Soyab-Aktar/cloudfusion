@@ -1,7 +1,13 @@
 import { z } from "zod";
 
-export const fileQuerySchema = z.object({
+const queryBoolean = z
+  .union([
+    z.boolean(),
+    z.enum(["true", "false"]).transform((val) => val === "true"),
+  ])
+  .optional();
 
+export const fileQuerySchema = z.object({
   search: z.string().trim().min(1).optional(),
 
   // pagination
@@ -21,9 +27,9 @@ export const fileQuerySchema = z.object({
   mimeType: z.string().optional(),
   extension: z.string().optional(),
   folderId: z.string().optional(), // specific folder ID, or "root" / "null" for root files
-  isRoot: z.coerce.boolean().optional(), // if true, returns files where folderId is null
-  isTrash: z.coerce.boolean().optional(),
-  isFavorite: z.coerce.boolean().optional(),
+  isRoot: queryBoolean,            // if true, returns files where folderId is null
+  isTrash: queryBoolean,
+  isFavorite: queryBoolean,
   connectedAccountId: z.string().optional(),
 
   // size range
