@@ -78,7 +78,7 @@ const getMe = async (user: IRequestUser) => {
 }
 
 const getNewToken = async (refreshToken: string, sessionToken: string) => {
-  const cleanSessionToken = sessionToken.split('.')[0];
+  const cleanSessionToken = sessionToken.split(".")[0];
 
   const isSessionTokenExists = await prisma.session.findUnique({
     where: {
@@ -89,10 +89,28 @@ const getNewToken = async (refreshToken: string, sessionToken: string) => {
     },
   });
 
-  if (!isSessionTokenExists) {
+  // 1. Reject missing or expired sessions
+  if (!isSessionTokenExists || isSessionTokenExists.expiresAt <= new Date()) {
     throw new AppError(status.UNAUTHORIZED, "Invalid or expired session token");
   }
 
+  // 2. Verify refresh token and confirm it belongs to the same user as the session
+  const verifiedRefreshToken = jwtUtils.verifyToken(
+    refreshToken,
+    envVars.REFRESH_TOKEN_SECRET
+  );
+
+  if (!verifiedRefreshToken.success || !verifiedRefreshToken.data) {
+    throw new AppError(status.UNAUTHORIZED, "Invalid or expired refresh token");
+  }
+
+  const data = verifiedRefreshToken.data as JwtPayload;
+
+  if (data.userId !== isSessionTokenExists.userId) {
+    throw new AppError(status.UNAUTHORIZED, "Token and session user mismatch");
+  }
+
+  // 3. Enforce current user status from DB
   const user = isSessionTokenExists.user;
 
   if (user.status === UserStatus.BLOCKED) {
@@ -103,34 +121,19 @@ const getNewToken = async (refreshToken: string, sessionToken: string) => {
     throw new AppError(status.NOT_FOUND, "User is deleted");
   }
 
-  const verifiedRefreshToken = jwtUtils.verifyToken(refreshToken, envVars.REFRESH_TOKEN_SECRET);
+  // 4. Mint new tokens using fresh DB user claims (not stale JWT payload)
+  const tokenPayload = {
+    userId: user.id,
+    role: user.role,
+    name: user.name,
+    email: user.email,
+    status: user.status,
+    isDeleted: user.isDeleted,
+    emailVerified: user.emailVerified,
+  };
 
-  if (!verifiedRefreshToken.success || !verifiedRefreshToken.data) {
-    throw new AppError(status.UNAUTHORIZED, "Invalid or expired refresh token");
-  }
-
-  const data = verifiedRefreshToken.data as JwtPayload;
-
-  const newAccessToken = tokenUtils.getAccessToken({
-    userId: data.userId,
-    role: data.role,
-    name: data.name,
-    email: data.email,
-    status: data.status,
-    isDeleted: data.isDeleted,
-    emailVerified: data.emailVerified,
-  });
-
-  const newRefreshToken = tokenUtils.getRefreshToken({
-    userId: data.userId,
-    role: data.role,
-    name: data.name,
-    email: data.email,
-    status: data.status,
-    isDeleted: data.isDeleted,
-    emailVerified: data.emailVerified,
-  });
-
+  const newAccessToken = tokenUtils.getAccessToken(tokenPayload);
+  const newRefreshToken = tokenUtils.getRefreshToken(tokenPayload);
 
   const updatedSessionToken = await prisma.session.update({
     where: {

@@ -13,7 +13,6 @@ const registerUser = catchAsync(
   async (req: Request, res: Response) => {
     const payload = req.body;
     const result = await AuthService.registerUser(payload);
-    console.log({ result });
     sendResponse(res, {
       httpStatusCode: status.CREATED,
       success: true,
@@ -36,7 +35,7 @@ const loginUser = catchAsync(
       success: true,
       message: "User logged in successfully",
       data: {
-        token, accessToken, refreshToken, user
+        user
       }
     })
   }
@@ -76,11 +75,7 @@ const getNewToken = catchAsync(
       httpStatusCode: status.OK,
       success: true,
       message: "New Token Generated",
-      data: {
-        accessToken,
-        refreshToken: newRefreshToken,
-        sessionToken,
-      },
+      data: null
     })
   }
 )
@@ -98,7 +93,7 @@ const verifyEmail = catchAsync(
       success: true,
       message: "Email Verified successfully",
       data: {
-        token, accessToken, refreshToken, user
+        user
       }
     })
   }
@@ -139,7 +134,7 @@ const changePassword = catchAsync(
     }
     const result = await AuthService.changePassword(payload, betterAuthSessionToken);
 
-    const { token, accessToken, refreshToken } = result;
+    const { token, accessToken, refreshToken, user } = result;
 
     tokenUtils.setAccessTokenCookie(res, accessToken);
     tokenUtils.setRefreshTokenCookie(res, refreshToken);
@@ -151,7 +146,7 @@ const changePassword = catchAsync(
       httpStatusCode: status.OK,
       success: true,
       message: "Password Changed successfully",
-      data: result
+      data: { user }
     })
   }
 )

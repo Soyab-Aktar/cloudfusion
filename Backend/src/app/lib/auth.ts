@@ -130,7 +130,7 @@ export const auth = betterAuth({
     }
   },
   advanced: {
-    useSecureCookies: false,
+    useSecureCookies: isProduction,
     cookies: {
       state: {
         attributes: {

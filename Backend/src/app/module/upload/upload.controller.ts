@@ -81,8 +81,8 @@ const parseUploadStream = (
         rejectOnce(err);
       });
 
-      req.on("close", () => {
-        if (!passThrough.writableFinished && !passThrough.writableEnded) {
+      res.on("close", () => {
+        if (!res.writableFinished && !passThrough.writableEnded) {
           passThrough.destroy();
         }
       });
