@@ -10,8 +10,8 @@ import cors from "cors";
 import { envVars } from "./app/config/env";
 import { notfound } from "./app/middleware/notFound";
 import { globalErrorHandler } from "./app/middleware/globalErrorHandler";
+import helmet from "helmet";
 
-// Global BigInt JSON serialization fix for Prisma BigInt fields
 (BigInt.prototype as any).toJSON = function () {
   return this.toString();
 };
@@ -21,6 +21,13 @@ const app: Application = express();
 app.set("query parser", (str: string) => qs.parse(str));
 app.set("view engine", "ejs");
 app.set("views", path.resolve(process.cwd(), `src/app/template`));
+
+app.use(
+  helmet({
+    contentSecurityPolicy: false,
+    crossOriginResourcePolicy: { policy: "cross-origin" },
+  })
+)
 
 app.use(
   cors({
