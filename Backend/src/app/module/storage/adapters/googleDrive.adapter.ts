@@ -1,7 +1,11 @@
 import { drive_v3, google } from "googleapis";
-import { CloudFileMetaData, IStorageAdapter, QuotaInfo, UploadFileInput } from "../../../interfaces/storageAdapter.interface";
+import {
+  CloudFileMetaData,
+  IStorageAdapter,
+  QuotaInfo,
+  UploadFileInput,
+} from "../../../interfaces/storageAdapter.interface";
 import { GoogleService } from "../../connectedAccount/google.service";
-import { prisma } from "../../../lib/prisma";
 import AppError from "../../../errorHelpers/AppError";
 import status from "http-status";
 import { Readable } from "stream";
@@ -13,11 +17,13 @@ export class GoogleDriveAdapter implements IStorageAdapter {
   }
   // Helper to get authenticated Google Drive client instance
   private async getDriveClient() {
-    const authClient = await GoogleService.getAuthedGoogleClient(this.accountId);
+    const authClient = await GoogleService.getAuthedGoogleClient(
+      this.accountId,
+    );
     return google.drive({
-      version: 'v3',
-      auth: authClient
-    })
+      version: "v3",
+      auth: authClient,
+    });
   }
 
   // Helper to format Google Drive API file object to CloudFileMetaData
@@ -43,14 +49,19 @@ export class GoogleDriveAdapter implements IStorageAdapter {
     return {
       totalBytes: updatedAccount.totalBytes,
       usedBytes: updatedAccount.usedBytes,
-      availableBytes: updatedAccount.availableBytes
-    }
+      availableBytes: updatedAccount.availableBytes,
+    };
   }
 
   // List Files & Folders inside a parent folder (or root if omitted)
   async listFiles(parentFolderId?: string): Promise<CloudFileMetaData[]> {
     const drive = await this.getDriveClient();
-    const parentQuery = parentFolderId ? `'${parentFolderId}' in parents` : "'root' in parents";
+    const safeParentId = parentFolderId
+      ? parentFolderId.replace(/\\/g, "\\\\").replace(/'/g, "\\'")
+      : null;
+    const parentQuery = safeParentId
+      ? `'${safeParentId}' in parents`
+      : "'root' in parents";
     const query = `${parentQuery} and trashed = false`;
 
     const response = await drive.files.list({
@@ -66,7 +77,10 @@ export class GoogleDriveAdapter implements IStorageAdapter {
   // Upload File Stream to Google Drive
   async uploadFile(input: UploadFileInput): Promise<CloudFileMetaData> {
     if (!input.stream) {
-      throw new AppError(status.BAD_REQUEST, "File stream is required for upload");
+      throw new AppError(
+        status.BAD_REQUEST,
+        "File stream is required for upload",
+      );
     }
     const drive = await this.getDriveClient();
     const response = await drive.files.create({
@@ -92,7 +106,7 @@ export class GoogleDriveAdapter implements IStorageAdapter {
     const drive = await this.getDriveClient();
     const response = await drive.files.get(
       { fileId: providerFileId, alt: "media" },
-      { responseType: "stream" }
+      { responseType: "stream" },
     );
     return response.data as Readable;
   }
@@ -104,14 +118,18 @@ export class GoogleDriveAdapter implements IStorageAdapter {
   }
 
   // Rename File/Folder from Google Drive
-  async renameFile(providerFileId: string, newName: string): Promise<CloudFileMetaData> {
+  async renameFile(
+    providerFileId: string,
+    newName: string,
+  ): Promise<CloudFileMetaData> {
     const drive = await this.getDriveClient();
     const response = await drive.files.update({
       fileId: providerFileId,
       requestBody: {
         name: newName,
       },
-      fields: "id, name, mimeType, size, parents, webViewLink, thumbnailLink, createdTime, modifiedTime",
+      fields:
+        "id, name, mimeType, size, parents, webViewLink, thumbnailLink, createdTime, modifiedTime",
     });
     return this.formatFileMetadata(response.data);
   }
@@ -119,7 +137,7 @@ export class GoogleDriveAdapter implements IStorageAdapter {
   // Create Folder in Google Drive
   async createFolder(
     name: string,
-    parentProviderFolderId?: string
+    parentProviderFolderId?: string,
   ): Promise<CloudFileMetaData> {
     const drive = await this.getDriveClient();
     const response = await drive.files.create({

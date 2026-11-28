@@ -236,10 +236,10 @@ const googleLoginSuccess = catchAsync(
 
 const handleOAuthError = catchAsync(
   async (req: Request, res: Response) => {
-    const error = req.query.error as string || "oauth_failed";
-    res.redirect(`${envVars.FRONTEND_URL}/login?error=${error}`);
+    const error = (req.query.error as string) || "oauth_failed";
+    res.redirect(`${envVars.FRONTEND_URL}/login?error=${encodeURIComponent(error)}`);
   }
-)
+);
 
 export const AuthController = {
   registerUser, loginUser, getMe, getNewToken, verifyEmail,

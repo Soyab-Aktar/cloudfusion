@@ -9,27 +9,51 @@ const router = Router();
 
 router.post(
   "/",
-  checkAuth(Role.USER),
+  checkAuth(Role.ADMIN, Role.USER),
   validateRequest(FileValidation.createFileMetadataZodSchema),
-  FileController.createFile
+  FileController.createFile,
 );
 
 // Search endpoint must be placed before /:id to prevent route collision
-router.get("/search", checkAuth(Role.USER), FileController.searchFiles);
-router.get("/", checkAuth(Role.USER), FileController.getUserFiles);
-router.get("/:id/download", checkAuth(Role.USER), FileController.downloadFile);
-router.get("/:id", checkAuth(Role.USER), FileController.getFileDetails);
+router.get(
+  "/search",
+  checkAuth(Role.ADMIN, Role.USER),
+  FileController.searchFiles,
+);
+router.get("/", checkAuth(Role.ADMIN, Role.USER), FileController.getUserFiles);
+router.get(
+  "/:id/download",
+  checkAuth(Role.ADMIN, Role.USER),
+  FileController.downloadFile,
+);
+router.get(
+  "/:id",
+  checkAuth(Role.ADMIN, Role.USER),
+  FileController.getFileDetails,
+);
 
 router.patch(
   "/:id",
-  checkAuth(Role.USER),
+  checkAuth(Role.ADMIN, Role.USER),
   validateRequest(FileValidation.updateFileMetadataZodSchema),
-  FileController.updateFile
+  FileController.updateFile,
 );
 
-router.patch("/:id/favorite", checkAuth(Role.USER), FileController.toggleFavorite);
-router.patch("/:id/trash", checkAuth(Role.USER), FileController.toggleTrash);
+router.patch(
+  "/:id/favorite",
+  checkAuth(Role.ADMIN, Role.USER),
+  FileController.toggleFavorite,
+);
+router.patch(
+  "/:id/trash",
+  checkAuth(Role.ADMIN, Role.USER),
+  FileController.toggleTrash,
+);
 
-router.delete("/:id", checkAuth(Role.USER), FileController.deleteFile);
+router.delete(
+  "/:id",
+  checkAuth(Role.ADMIN, Role.USER),
+  FileController.deleteFile,
+);
 
 export const FileRoutes = router;

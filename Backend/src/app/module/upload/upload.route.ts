@@ -6,6 +6,6 @@ import { UploadController } from "./upload.controller";
 const router = Router();
 
 // Chunks flow: HTTP request → busboy → PassThrough stream → Google Drive
-router.post("/", checkAuth(Role.USER), UploadController.uploadFile);
+router.post("/", checkAuth(Role.USER, Role.ADMIN), UploadController.uploadFile);
 
 export const UploadRoutes = router;

@@ -9,19 +9,30 @@ const router = Router();
 
 router.post(
   "/",
-  checkAuth(Role.USER),
+  checkAuth(Role.USER, Role.ADMIN),
   validateRequest(FolderValidation.createFolderZodSchema),
-  FolderController.createFolder
+  FolderController.createFolder,
 );
-router.get("/", checkAuth(Role.USER), FolderController.getUserFolders);
-router.get("/:id", checkAuth(Role.USER), FolderController.getFolderDetails);
+router.get(
+  "/",
+  checkAuth(Role.USER, Role.ADMIN),
+  FolderController.getUserFolders,
+);
+router.get(
+  "/:id",
+  checkAuth(Role.USER, Role.ADMIN),
+  FolderController.getFolderDetails,
+);
 router.patch(
   "/:id",
-  checkAuth(Role.USER),
+  checkAuth(Role.USER, Role.ADMIN),
   validateRequest(FolderValidation.renameFolderZodSchema),
-  FolderController.renameFolder
+  FolderController.renameFolder,
 );
-router.delete("/:id", checkAuth(Role.USER), FolderController.deleteFolder);
+router.delete(
+  "/:id",
+  checkAuth(Role.USER, Role.ADMIN),
+  FolderController.deleteFolder,
+);
 
 export const FolderRoutes = router;
-
