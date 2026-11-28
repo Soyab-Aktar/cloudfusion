@@ -1,56 +1,134 @@
 import status from "http-status";
 import AppError from "../../errorHelpers/AppError";
 import { prisma } from "../../lib/prisma";
-import { ICreateFolder, IRenameFolder } from "./folder.interface";
+import { GoogleService } from "../connectedAccount/google.service";
 import { StorageAdapterFactory } from "../storage/storageAdapter.factory";
+import { ICreateFolder, IRenameFolder } from "./folder.interface";
+
+/**
+ * Collects the target folder ID plus all nested descendant folder IDs
+ * so deleting a folder moves its entire subtree to Trash.
+ */
+const collectSubtreeFolderIds = async (
+  userId: string,
+  rootFolderId: string
+): Promise<string[]> => {
+  const allIds: string[] = [rootFolderId];
+  let frontier: string[] = [rootFolderId];
+
+  while (frontier.length > 0) {
+    const children = await prisma.folder.findMany({
+      where: {
+        userId,
+        parentId: { in: frontier },
+        isTrash: false,
+      },
+      select: { id: true },
+    });
+
+    frontier = children.map((c) => c.id);
+    allIds.push(...frontier);
+  }
+
+  return allIds;
+};
 
 const createFolder = async (payload: ICreateFolder) => {
-  const { userId, name, parentId, connectedAccountId } = payload;
+  const { userId, name, parentId } = payload;
+  let resolvedAccountId: string | null = payload.connectedAccountId || null;
   let providerFolderId: string | undefined = undefined;
   let targetParentDbId: string | null = parentId || null;
   let targetParentProviderId: string | undefined = undefined;
 
-  // 1. If explicit parentId is given, validate and use it
+  // 1. Validate explicit parentId if provided
   if (parentId) {
     const parentFolder = await prisma.folder.findFirst({
-      where: { id: parentId, userId },
+      where: { id: parentId, userId, isTrash: false },
     });
+
     if (!parentFolder) {
       throw new AppError(status.NOT_FOUND, "Parent folder not found");
     }
-    targetParentProviderId = parentFolder.providerFolderId ?? undefined;
+
+    // If parent is a Physical Folder, child must belong to the same drive
+    if (parentFolder.connectedAccountId) {
+      if (
+        resolvedAccountId &&
+        resolvedAccountId !== parentFolder.connectedAccountId
+      ) {
+        throw new AppError(
+          status.BAD_REQUEST,
+          "Cannot create a folder for a different drive inside a physical folder"
+        );
+      }
+      resolvedAccountId = parentFolder.connectedAccountId;
+      targetParentProviderId = parentFolder.providerFolderId ?? undefined;
+    }
+
     targetParentDbId = parentFolder.id;
   }
-  // 2. If NO parentId is given, default to the "CloudFusion Workspace" root folder!
-  else if (connectedAccountId) {
-    const rootWorkspace = await prisma.folder.findFirst({
+
+  // 2. If creating a Physical Folder, verify account & ensure Drive parent exists
+  if (resolvedAccountId) {
+    const account = await prisma.connectedAccount.findFirst({
       where: {
+        id: resolvedAccountId,
         userId,
-        connectedAccountId,
-        isRoot: true,
+        status: "CONNECTED",
       },
     });
 
-    if (rootWorkspace) {
-      targetParentProviderId = rootWorkspace.providerFolderId ?? undefined;
-      targetParentDbId = rootWorkspace.id;
+    if (!account) {
+      throw new AppError(
+        status.NOT_FOUND,
+        "Connected account not found or disconnected"
+      );
     }
-  }
 
-  // 3. Create the physical folder in the cloud inside the resolved parent
-  if (connectedAccountId) {
-    const adapter = await StorageAdapterFactory.getAdapter(userId, connectedAccountId);
+    // Ensure physical folders without a physical parent land in "CloudFusion Workspace"
+    if (!targetParentProviderId) {
+      let rootWorkspace = await prisma.folder.findFirst({
+        where: {
+          userId,
+          connectedAccountId: resolvedAccountId,
+          isRoot: true,
+          isTrash: false,
+        },
+      });
+
+      if (!rootWorkspace || !rootWorkspace.providerFolderId) {
+        rootWorkspace = await GoogleService.ensureGoogleAppFolder(resolvedAccountId);
+      }
+
+      if (!rootWorkspace?.providerFolderId) {
+        throw new AppError(
+          status.INTERNAL_SERVER_ERROR,
+          "Failed to resolve CloudFusion Workspace root folder"
+        );
+      }
+
+      targetParentProviderId = rootWorkspace.providerFolderId;
+      if (!targetParentDbId) {
+        targetParentDbId = rootWorkspace.id;
+      }
+    }
+
+    // 3. Create the physical folder in the cloud
+    const adapter = await StorageAdapterFactory.getAdapter(
+      userId,
+      resolvedAccountId
+    );
     const cloudFolder = await adapter.createFolder(name, targetParentProviderId);
     providerFolderId = cloudFolder.providerFileId;
   }
 
-  // 4. Save to PostgreSQL database with the resolved parentId
+  // 4. Save to PostgreSQL
   const folder = await prisma.folder.create({
     data: {
       name,
       userId,
       parentId: targetParentDbId,
-      connectedAccountId: connectedAccountId || null,
+      connectedAccountId: resolvedAccountId,
       providerFolderId: providerFolderId || null,
     },
     include: {
@@ -68,8 +146,11 @@ const createFolder = async (payload: ICreateFolder) => {
   return folder;
 };
 
-
-const getUserFolders = async (userId: string, parentId?: string, search?: string) => {
+const getUserFolders = async (
+  userId: string,
+  parentId?: string,
+  search?: string
+) => {
   const whereConditions: any = {
     userId,
     isTrash: false,
@@ -93,17 +174,18 @@ const getUserFolders = async (userId: string, parentId?: string, search?: string
       },
       _count: {
         select: {
-          files: true,
-          children: true,
-        }
-      }
+          files: { where: { isTrash: false } },
+          children: { where: { isTrash: false } },
+        },
+      },
     },
     orderBy: {
-      name: 'asc',
-    }
+      name: "asc",
+    },
   });
+
   return folders;
-}
+};
 
 const getFolderDetails = async (userId: string, folderId: string) => {
   const folder = await prisma.folder.findFirst({
@@ -122,9 +204,11 @@ const getFolderDetails = async (userId: string, folderId: string) => {
       },
     },
   });
+
   if (!folder) {
     throw new AppError(status.NOT_FOUND, "Folder not found");
   }
+
   return folder;
 };
 
@@ -134,56 +218,86 @@ const renameFolder = async (payload: IRenameFolder) => {
   const folder = await prisma.folder.findFirst({
     where: {
       id: folderId,
-      userId
+      userId,
+      isTrash: false,
     },
   });
+
   if (!folder) {
     throw new AppError(status.NOT_FOUND, "Folder not found");
   }
+
   if (folder.isRoot) {
-    throw new AppError(status.BAD_REQUEST, "Cannot rename the root workspace folder");
+    throw new AppError(
+      status.BAD_REQUEST,
+      "Cannot rename the root workspace folder"
+    );
   }
 
   if (folder.connectedAccountId && folder.providerFolderId) {
     try {
-      const adapter = await StorageAdapterFactory.getAdapter(userId, folder.connectedAccountId);
+      const adapter = await StorageAdapterFactory.getAdapter(
+        userId,
+        folder.connectedAccountId
+      );
       await adapter.renameFile(folder.providerFolderId, newName);
     } catch (err) {
-      console.warn("Failed to rename physical folder in cloud, continuing DB rename:", err);
+      console.warn(
+        "Failed to rename physical folder in cloud, continuing DB rename:",
+        err
+      );
     }
   }
 
   const updatedFolder = await prisma.folder.update({
-    where: {
-      id: folderId
-    },
-    data: {
-      name: newName
-    }
+    where: { id: folderId },
+    data: { name: newName },
   });
+
   return updatedFolder;
-}
+};
 
 const deleteFolder = async (userId: string, folderId: string) => {
   const folder = await prisma.folder.findFirst({
-    where: { id: folderId, userId },
+    where: { id: folderId, userId, isTrash: false },
   });
+
   if (!folder) {
     throw new AppError(status.NOT_FOUND, "Folder not found");
   }
-  // Delete physical cloud folder if linked
-  if (folder.connectedAccountId && folder.providerFolderId) {
-    try {
-      const adapter = await StorageAdapterFactory.getAdapter(userId, folder.connectedAccountId);
-      await adapter.deleteFile(folder.providerFolderId);
-    } catch (error) {
-      console.warn("Failed to delete physical folder in cloud, continuing DB delete:", error);
-    }
+
+  if (folder.isRoot) {
+    throw new AppError(
+      status.BAD_REQUEST,
+      "Cannot delete the root workspace folder"
+    );
   }
-  // Delete virtual folder from database
-  await prisma.folder.delete({
-    where: { id: folderId },
-  });
+
+  // Collect this folder and all nested subfolders
+  const subtreeIds = await collectSubtreeFolderIds(userId, folderId);
+
+  // Move the folder subtree and all contained files to Trash in one transaction
+  await prisma.$transaction([
+    prisma.file.updateMany({
+      where: {
+        userId,
+        folderId: { in: subtreeIds },
+        isTrash: false,
+      },
+      data: {
+        isTrash: true,
+      },
+    }),
+    prisma.folder.updateMany({
+      where: {
+        userId,
+        id: { in: subtreeIds },
+      },
+      data: {
+        isTrash: true,
+      },
+    }),
+  ]);
 
   return null;
 };
